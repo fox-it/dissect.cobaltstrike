@@ -1,0 +1,6 @@
+sphinx
+sphinx_rtd_theme
+sphinx-autoapi
+sphinx-copybutton
+sphinx-argparse-cli
+ipython

@@ -1,0 +1,191 @@
+start: value*
+
+?value: "set" OPTION string ";"                                         -> option
+    | "http-config" "{" http_config_options* "}"                        -> http_config
+    | "https-certificate" variant? "{" https_certificate_options* "}"   -> https_certificate
+    | "code-signer" "{" code_signer_options* "}"                        -> code_signer
+    | "http-stager" variant? "{" http_stager_options* "}"               -> http_stager
+    | "http-get" variant? "{" http_get_options* "}"                     -> http_get
+    | "http-post" variant? "{" http_post_options* "}"                   -> http_post
+    | "stage" "{" stage_options* "}"                                    -> stage
+    | "process-inject" "{" process_inject_options* "}"                  -> process_inject
+    | "post-ex" "{" postex_options* "}"                                 -> post_ex
+    | "dns-beacon" "{" dns_beacon_options* "}"                          -> dns_beacon
+
+OPTION: "sample_name"
+    | "data_jitter"
+    | "dns_idle"
+    | "dns_max_txt"
+    | "dns_sleep"
+    | "dns_stager_prepend"
+    | "dns_stager_subhost"
+    | "dns_ttl"
+    | "host_stage"
+    | "jitter"
+    | "maxdns"
+    | "pipename"
+    | "pipename_stager"
+    | "sleeptime"
+    | "smb_frame_header"
+    | "ssh_banner"
+    | "ssh_pipename"
+    | "tcp_frame_header"
+    | "tcp_port"
+    | "useragent"
+    | "spawnto"                 // deprecated since Cobalt Strike 3.6
+    | "spawnto_x86"             // moved to post-ex since Cobalt Strike 3.14
+    | "spawnto_x64"             // moved to post-ex since Cobalt Strike 3.14
+    | "amsi_disable"            // moved to post-ex since Cobalt Strike 3.14
+    | "create_remote_thread"    // deprecated since Cobalt Strike 3.12
+    | "hijack_remote_thread"    // deprecated since Cobalt Strike 3.12
+
+http_config_options: "set" "headers" string ";"     -> headers
+    | "header" string string ";"                    -> header
+    | "set" "trust_x_forwarded_for" string ";"      -> trust_x_forwarded_for
+    | "set" "block_useragents" string ";"           -> block_useragents
+    | "set" "allow_useragents" string ";"           -> allow_useragents
+
+http_stager_options: "set" "uri_x86" string ";"     -> uri_x86
+    | "set" "uri_x64" string ";"                    -> uri_x64
+    | "client" "{" http_options* "}"                -> client
+    | "server" "{" http_options* "}"                -> server
+
+http_options: "header" string string ";"            -> header
+    | "parameter" string string ";"                 -> parameter
+    | "output" "{" data_transform* "}"              -> output
+
+data_transform: steps termination
+
+steps: transform_statement*
+termination: termination_statement ~ 1
+
+transform_statement: "append" string ";"    -> append
+    | "base64" ";"                          -> base64
+    | "base64url" ";"                       -> base64url
+    | "mask" ";"                            -> mask
+    | "netbios" ";"                         -> netbios
+    | "netbiosu" ";"                        -> netbiosu
+    | "prepend" string ";"                  -> prepend
+
+termination_statement: "header" string ";"  -> header
+    | "parameter" string ";"                -> parameter
+    | "print" ";"                           -> print
+    | "uri-append" ";"                      -> uri_append
+
+stage_transform: "prepend" string ";"       -> prepend
+    | "append" string ";"                   -> append
+    | "strrep" string string ";"            -> strrep
+
+http_get_options: "set" "uri" string ";"            -> uri
+    | "set" "verb" string ";"                       -> verb
+    | "client" "{" http_get_client_options* "}"     -> client
+    | "server" "{" http_options* "}"                -> server
+
+http_get_client_options: "header" string string ";" -> header
+    | "set" "verb" string ";"                       -> verb
+    | "metadata" "{" data_transform* "}"            -> metadata
+    | "id" "{" data_transform*  "}"                 -> id
+    | "parameter" string string ";"                 -> parameter
+    | "output" "{"  data_transform*  "}"            -> output
+
+http_post_options: "set" "uri" string ";"           -> uri
+    | "set" "verb" string ";"                       -> verb
+    | "client" "{" http_get_client_options* "}"     -> client
+    | "server" "{" http_options* "}"                -> server
+
+https_certificate_options: "set" "C" string ";"     -> country
+    | "set" "CN" string ";"                         -> common_name
+    | "set" "L" string ";"                          -> locality
+    | "set" "OU" string ";"                         -> org_unit
+    | "set" "O" string ";"                          -> org
+    | "set" "ST" string ";"                         -> state
+    | "set" "validity" string ";"                   -> validity
+    | "set" "keystore" string ";"                   -> keystore
+    | "set" "password" string ";"                   -> password
+
+code_signer_options: "set" "keystore" string ";"    -> keystore
+    | "set" "password" string ";"                   -> password
+    | "set" "alias" string ";"                      -> alias
+    | "set" "digest_algorithm" string ";"           -> digest_algorithm
+    | "set" "timestamp" string ";"                  -> timestamp
+    | "set" "timestamp_url" string ";"              -> timestamp_url
+
+stage_options: "string" string ";"                  -> string
+    | "stringw" string ";"                          -> stringw
+    | "transform-x86" "{" stage_transform* "}"      -> transform_x86
+    | "transform-x64" "{" stage_transform* "}"      -> transform_x64
+    | "set" "allocator" string ";"                  -> allocator
+    | "set" "cleanup" string ";"                    -> cleanup
+    | "set" "magic_pe" string ";"                   -> magic_pe
+    | "set" "magic_mz_x86" string ";"               -> magic_mz_x86
+    | "set" "magic_mz_x64" string ";"               -> magic_mz_x64
+    | "set" "obfuscate" string ";"                  -> obfuscate
+    | "set" "sleep_mask" string ";"                 -> sleep_mask
+    | "set" "smartinject" string ";"                -> smartinject
+    | "set" "stomppe" string ";"                    -> stomppe
+    | "set" "userwx" string ";"                     -> userwx
+    | "set" "compile_time" string ";"               -> compile_time
+    | "set" "entry_point" string ";"                -> entry_point
+    | "set" "module_x86" string ";"                 -> module_x86
+    | "set" "module_x64" string ";"                 -> module_x86
+    | "set" "image_size_x86" string ";"             -> image_size_x86
+    | "set" "image_size_x64" string ";"             -> image_size_x64
+    | "set" "name" string ";"                       -> name
+    | "set" "rich_header" string ";"                -> rich_header
+    | "set" "checksum" string ";"                   -> checksum
+
+process_inject_options: "set" "allocator" string ";"    -> allocator
+    | "set" "min_alloc" string ";"                      -> min_alloc
+    | "set" "startrwx" string ";"                       -> startrwx
+    | "set" "userwx" string ";"                         -> userwx
+    | "transform-x86" "{" stage_transform* "}"          -> transform_x86
+    | "transform-x64" "{" stage_transform* "}"          -> transform_x64
+    | "execute" "{" execute_options* "}"                -> execute
+    | "disable" string ";"                              -> disable
+
+execute_options: "CreateThread" string ";"  -> createthread_special
+    | "CreateRemoteThread" string ";"       -> createremotethread_special
+    | "CreateThread" ";"                    -> createthread
+    | "CreateRemoteThread" ";"              -> createremotethread
+    | "NtQueueApcThread" ";"                -> ntqueueapcthread
+    | "NtQueueApcThread-s" ";"              -> ntqueueapcthread_s
+    | "RtlCreateUserThread" ";"             -> rtlcreateuserthread
+    | "SetThreadContext" ";"                -> setthreadcontext
+
+postex_options: "set" "spawnto_x86" string ";"  -> spawnto_x86
+    | "set" "spawnto_x64" string ";"            -> spawnto_x64
+    | "set" "obfuscate" string ";"              -> obfuscate
+    | "set" "pipename" string ";"               -> pipename
+    | "set" "smartinject" string ";"            -> smartinject
+    | "set" "amsi_disable" string ";"           -> amsi_disable
+    | "set" "keylogger" string ";"              -> keylogger
+    | "set" "thread_hint" string ";"            -> thread_hint
+
+dns_beacon_options: "set" "dns_idle" string ";" -> dns_idle
+    | "set" "dns_max_txt" string ";"            -> dns_max_txt
+    | "set" "dns_sleep" string ";"              -> dns_sleep
+    | "set" "dns_ttl" string ";"                -> dns_ttl
+    | "set" "maxdns" string ";"                 -> maxdns
+    | "set" "dns_stager_prepend" string ";"     -> dns_stager_prepend
+    | "set" "dns_stager_subhost" string ";"     -> dns_stager_subhost
+    | "set" "beacon" string ";"                 -> beacon
+    | "set" "get_A" string ";"                  -> get_a
+    | "set" "get_AAAA" string ";"               -> get_aaaa
+    | "set" "get_TXT" string ";"                -> get_txt
+    | "set" "put_metadata" string ";"           -> put_metadata
+    | "set" "put_output" string ";"             -> put_output
+    | "set" "ns_response" string ";"            -> ns_response
+
+header: string
+string: STRING
+variant: string
+
+STRING: "\"" /(.|\n)*?/ /(?<!\\)(\\\\)*?/ "\""
+
+%import common.WS
+%import common.SH_COMMENT
+%import common.NEWLINE
+
+%ignore WS
+%ignore SH_COMMENT
+%ignore NEWLINE
