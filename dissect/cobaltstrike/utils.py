@@ -32,12 +32,14 @@ def catch_sigpipe(func):
             print("Aborted!", file=sys.stderr)
             return 1
         except (BrokenPipeError, OSError) as e:
-            # Windows raises -> OSError: [Errno 22] Invalid argument
-            if type(e) is OSError and e.errno != 22:
-                raise
-            devnull = os.open(os.devnull, os.O_WRONLY)
-            os.dup2(devnull, sys.stdout.fileno())
-            return 1
+            exc_type = type(e)
+            # Only catch BrokenPipeError or OSError 22
+            if (exc_type is BrokenPipeError) or (exc_type is OSError and e.errno == 22):
+                devnull = os.open(os.devnull, os.O_WRONLY)
+                os.dup2(devnull, sys.stdout.fileno())
+                return 1
+            # Raise other exceptions
+            raise
 
     return wrapper
 
