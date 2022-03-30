@@ -15,6 +15,8 @@ from typing import BinaryIO, Iterator
 
 def xor(data: bytes, key: bytes) -> bytes:
     """XOR data with key"""
+    if sum(key) == 0:
+        return data
     data = bytearray(data)
     for i in range(len(data)):
         data[i] ^= key[i % len(key)]

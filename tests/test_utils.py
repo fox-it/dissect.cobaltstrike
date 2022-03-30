@@ -30,6 +30,8 @@ def test_xor():
     assert utils.xor(b"\x11\x22\x33\x44", b"\x11\x22\x33\x44") == b"\x00\x00\x00\x00"
     assert utils.xor(b"\x11\x11\x11\x11", b"\x11") == b"\x00\x00\x00\x00"
     assert utils.xor(b"hi", b"secret") == b"\x1b\x0c"
+    assert utils.xor(b"no xor key", b"") == b"no xor key"
+    assert utils.xor(b"zero xor key", b"\x00\x00\x00\x00") == b"zero xor key"
 
 
 @pytest.mark.parametrize(
