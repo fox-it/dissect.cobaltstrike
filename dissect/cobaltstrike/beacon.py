@@ -3,6 +3,7 @@ This module is responsible for extracting and parsing configuration from Cobalt 
 """
 import os
 import io
+import sys
 import hashlib
 import logging
 import ipaddress
@@ -974,8 +975,13 @@ def main():
     if args.xorkey:
         xor_keys = tuple(utils.pack(int(x, 0)) for x in args.xorkey)
 
-    config = BeaconConfig.from_path(args.input, xor_keys=xor_keys, all_xor_keys=args.all)
-    if not config:
+    try:
+        if args.input in ("-", "/dev/stdin"):
+            with io.BytesIO(sys.stdin.buffer.read()) as fin:
+                config = BeaconConfig.from_file(fin, xor_keys=xor_keys, all_xor_keys=args.all)
+        else:
+            config = BeaconConfig.from_path(args.input, xor_keys=xor_keys, all_xor_keys=args.all)
+    except ValueError:
         print("Beacon configuration not found.")
         return 1
 
