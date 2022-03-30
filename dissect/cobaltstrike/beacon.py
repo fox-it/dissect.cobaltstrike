@@ -973,7 +973,7 @@ def main():
 
     xor_keys = None
     if args.xorkey:
-        xor_keys = tuple(utils.pack(int(x, 0)) for x in args.xorkey)
+        xor_keys = tuple(utils.pack_be(int(x, 0)) for x in args.xorkey)
 
     try:
         if args.input in ("-", "/dev/stdin"):
