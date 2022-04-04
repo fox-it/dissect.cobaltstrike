@@ -7,6 +7,4 @@ write_to = "dissect/cobaltstrike/_version.py"
 
 [tool.black]
 line-length = 120
-diff = true
-check = true
 color = true
