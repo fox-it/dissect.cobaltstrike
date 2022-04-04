@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.abspath("../"))
 # Get version info from dissect.cobaltstrike._version
 try:
     from dissect.cobaltstrike._version import version
+
     version, _, _ = version.partition("+")
     release = version
 except ModuleNotFoundError:
@@ -28,7 +29,6 @@ except ModuleNotFoundError:
 project = "dissect.cobaltstrike"
 copyright = "2022, NCC Group / Fox-IT"
 author = "NCC Group / Fox-IT"
-
 
 
 # -- General configuration ---------------------------------------------------
