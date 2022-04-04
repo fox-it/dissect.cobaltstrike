@@ -5,6 +5,7 @@ import io
 import os
 import re
 import sys
+import errno
 import random
 import string
 import itertools
@@ -33,14 +34,15 @@ def catch_sigpipe(func):
         except KeyboardInterrupt:
             print("Aborted!", file=sys.stderr)
             return 1
-        except (BrokenPipeError, OSError) as e:
-            exc_type = type(e)
-            # Only catch BrokenPipeError or OSError 22
-            if (exc_type is BrokenPipeError) or (exc_type is OSError and e.errno == 22):
+        except OSError as e:
+            # Only catch:
+            #  - BrokenPipeError: [Errno 32] Broken pipe
+            #  - OSError: [Errno 22] Invalid argument
+            if e.errno in (errno.EPIPE, errno.EINVAL):
                 devnull = os.open(os.devnull, os.O_WRONLY)
                 os.dup2(devnull, sys.stdout.fileno())
                 return 1
-            # Raise other exceptions
+            # Raise other OSError exceptions
             raise
 
     return wrapper
