@@ -20,9 +20,8 @@ def test_beacon_from_file(beacon_x64_file):
     assert bconfig.max_setting_enum == 70
     assert max(bconfig.setting_enums) == 70
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="No valid Beacon configuration found"):
         beacon.BeaconConfig.from_file(io.BytesIO(b"no bacon for you"))
-    excinfo.match("No valid Beacon configuration found")
 
 
 def test_beacon_from_path(beacon_x86_file, tmp_path):
@@ -36,9 +35,8 @@ def test_beacon_from_path(beacon_x86_file, tmp_path):
 
     with (tmp_path / "bacon.bin") as p:
         p.write_bytes(b"no bacon for you")
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError, match="No valid Beacon configuration found"):
             beacon.BeaconConfig.from_path(p)
-        excinfo.match("No valid Beacon configuration found")
 
 
 def test_beacon_from_bytes(beacon_x86_file):
@@ -52,9 +50,8 @@ def test_beacon_from_bytes(beacon_x86_file):
     assert bconfig.version == "Cobalt Strike 4.2 (Nov 06, 2020)"
     assert bconfig.max_setting_enum == 58
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="No valid Beacon configuration found"):
         beacon.BeaconConfig.from_bytes(b"no bacon for you")
-    excinfo.match("No valid Beacon configuration found")
 
 
 def test_beacon_custom_xorkey(beacon_custom_xorkey_file):
@@ -62,12 +59,12 @@ def test_beacon_custom_xorkey(beacon_custom_xorkey_file):
     fh = io.BytesIO(beacon_custom_xorkey_file.read())
 
     # Try default xor keys.
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="No valid Beacon configuration found"):
         beacon.BeaconConfig.from_file(fh)
 
     # Try all xorkeys (but with invalid one)
     with patch("dissect.cobaltstrike.beacon.make_byte_list", return_value=[b"\xaa"]):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="No valid Beacon configuration found"):
             bconfig = beacon.BeaconConfig.from_file(fh, all_xor_keys=True)
 
     # Make the correct XOR key the first entry
