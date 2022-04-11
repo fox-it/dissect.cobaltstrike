@@ -1,4 +1,6 @@
 import io
+import sys
+import subprocess
 from unittest.mock import patch
 
 from dissect.cobaltstrike import beacon
@@ -176,3 +178,109 @@ def test_beacon_settings_readonly(beacon_x64_file):
 
     with pytest.raises(TypeError):
         bconfig.raw_settings["foo"] = "bar"
+
+
+@pytest.mark.parametrize(
+    ("fixture", "options", "ret", "stdout", "stderr"),
+    [
+        pytest.param(
+            "beacon_custom_xorkey_file",
+            ["-x", "0xCC"],
+            0,
+            b"SETTING_PUBKEY = '36aff0b273cb7aa704e4219ad3be78defcc8c1d7ecb779d55f438e82c7138673'",
+            None,
+            id="beacon_custom_xorkey_file-stdin-0xcc",
+        ),
+        pytest.param(
+            "beacon_x86_file",
+            [],
+            0,
+            b"SETTING_PUBKEY = '71fab2149cbdce552f00e6d75372494d3f7755d366fd6849a6d5c9e0f73bc40f'",
+            None,
+            id="beacon_x86_file-stdin-normal",
+        ),
+        pytest.param(
+            "beacon_x86_file",
+            ["-t", "c2profile"],
+            0,
+            b'prepend "wordpress_ed1f617bbd6c004cc09e046f3c1b7148="',
+            None,
+            id="beacon_x86_file-stdin-c2profile",
+        ),
+        pytest.param(
+            "beacon_x86_file",
+            ["-t", "raw"],
+            0,
+            b"<Setting index=<BeaconSetting.SETTING_WATERMARK: 37>, type=<SettingsType.TYPE_INT: 2>",
+            None,
+            id="beacon_x86_file-stdin-raw",
+        ),
+        pytest.param(
+            "beacon_x86_file",
+            ["-t", "dumpstruct"],
+            0,
+            b"BeaconSetting.SETTING_PUBKEY",
+            None,
+            id="beacon_x86_file-stdin-dumpstruct",
+        ),
+        pytest.param(
+            "beacon_x64_path",
+            ["-t", "normal"],
+            0,
+            b"SETTING_PUBKEY = ",
+            None,
+            id="beacon_x64_path-normal",
+        ),
+        pytest.param(
+            "beacon_x64_config_block",
+            [],
+            0,
+            b"SETTING_PUBKEY = ",
+            None,
+            id="beacon_x64_config_block-stdin-unobfuscated",
+        ),
+        pytest.param(
+            b"NO BACON",
+            [],
+            1,
+            None,
+            b"No beacon configuration found",
+            id="invalid-beacon-stdin",
+        ),
+    ],
+)
+def test_main(capfdbinary, request, fixture, options, ret, stdout, stderr):
+    if isinstance(fixture, bytes):
+        beacon_file = io.BytesIO(fixture)
+    else:
+        beacon_file = request.getfixturevalue(fixture)
+
+    if isinstance(beacon_file, bytes):
+        beacon_file = io.BytesIO(beacon_file)
+
+    stdin = subprocess.PIPE if hasattr(beacon_file, "read") else None
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "dissect.cobaltstrike.beacon",
+            *options,
+            "-" if stdin else beacon_file,
+        ],
+        stdin=stdin,
+    )
+    if stdin:
+        while True:
+            data = beacon_file.read(1024)
+            if not data:
+                break
+            proc.stdin.write(data)
+            proc.stdin.flush()
+        proc.stdin.close()
+    proc.wait()
+    assert proc.returncode == ret
+    cap = capfdbinary.readouterr()
+    if stdout:
+        assert stdout in cap.out
+    if stderr:
+        assert stderr in cap.err

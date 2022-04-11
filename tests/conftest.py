@@ -3,6 +3,8 @@ import zipfile
 from contextlib import contextmanager
 from pathlib import Path
 
+from dissect.cobaltstrike import beacon
+
 import pytest
 
 beacons = {
@@ -17,7 +19,7 @@ beacons = {
 
 # This automatically generates a fixture for each beacon file
 def generate_beacon_file_fixture(filename):
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def my_fixture(request):
         testpath = Path(request.fspath.dirname)
         beacon_zip_path = testpath / "beacons" / filename
@@ -36,12 +38,32 @@ def generate_beacon_file_fixture(filename):
     return my_fixture
 
 
+def generate_beacon_path_fixture(filename):
+    @pytest.fixture()
+    def my_fixture(request, tmp_path):
+        testpath = Path(request.fspath.dirname)
+        beacon_zip_path = testpath / "beacons" / filename
+        if not beacon_zip_path.exists():
+            pytest.skip(f"Beacon {beacon_zip_path!r} not found")
+
+        with zipfile.ZipFile(beacon_zip_path) as zf:
+            zf.extract(beacon_zip_path.stem, path=tmp_path, pwd=b"dissect.cobaltstrike")
+        return tmp_path / beacon_zip_path.stem
+
+    return my_fixture
+
+
 def inject_beacon_file_fixture(name, filename):
     globals()[name] = generate_beacon_file_fixture(filename)
 
 
+def inject_beacon_path_fixture(name, filename):
+    globals()[name] = generate_beacon_path_fixture(filename)
+
+
 for name, filename in beacons.items():
     inject_beacon_file_fixture(f"{name}_file", filename)
+    inject_beacon_path_fixture(f"{name}_path", filename)
 
 
 @contextmanager
@@ -49,3 +71,8 @@ def unzip_beacon_as_fh(zip_file, pwd=b"dissect.cobaltstrike"):
     """Return file object of beacon from zipfile"""
     with zipfile.ZipFile(zip_file) as zf:
         yield zf.open(zip_file.stem, pwd=pwd)
+
+
+@pytest.fixture()
+def beacon_x64_config_block(beacon_x64_file):
+    return beacon.BeaconConfig.from_file(beacon_x64_file).config_block
