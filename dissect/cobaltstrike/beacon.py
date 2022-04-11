@@ -845,7 +845,7 @@ class BeaconConfig:
         domains = self.raw_settings.get("SETTING_DOMAINS")
         if not isinstance(domains, bytes):
             return []
-        return [pair for pair in grouper(null_terminated_str(domains).split(","), 2)]
+        return list(grouper(null_terminated_str(domains).split(","), 2))
 
     @property
     def uris(self) -> List[str]:
@@ -982,7 +982,7 @@ def main():
         else:
             config = BeaconConfig.from_path(args.input, xor_keys=xor_keys, all_xor_keys=args.all)
     except ValueError:
-        print("Beacon configuration not found.")
+        print(f"{args.input}: No beacon configuration found.", file=sys.stderr)
         return 1
 
     if args.type == "raw":
@@ -1004,4 +1004,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
