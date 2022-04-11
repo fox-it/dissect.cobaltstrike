@@ -9,9 +9,8 @@ import pytest
 
 
 def test_xordecode(beacon_x86_file):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="MZ header not found for: .*"):
         xf = xordecode.XorEncodedFile.from_file(beacon_x86_file, maxrange=10)
-    excinfo.match("MZ header not found for: .*")
 
     xf = xordecode.XorEncodedFile.from_file(beacon_x86_file)
 
@@ -48,9 +47,8 @@ def test_xordecode(beacon_x86_file):
 
 
 def test_from_file(tmp_path):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="MZ header not found for: .*"):
         xordecode.XorEncodedFile.from_file(io.BytesIO(b"testing"))
-    excinfo.match("MZ header not found for: .*")
 
     xf = xordecode.XorEncodedFile(io.BytesIO(b"\x00\x00\x00\x00SSSStest"))
     assert xf.read() == b"test"

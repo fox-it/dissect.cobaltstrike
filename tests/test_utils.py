@@ -35,7 +35,7 @@ def test_xor():
 
 
 @pytest.mark.parametrize(
-    "uri,expected,x86,x64",
+    ("uri", "expected", "x86", "x64"),
     [
         ("/TOKn", 92, True, False),
         ("/TO/Kn", 92, True, False),
