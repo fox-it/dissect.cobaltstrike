@@ -1,7 +1,7 @@
 Installation
 ============
 
-The easiest way to install ``dissesct.cobaltstrike`` is to use **pip**:
+The easiest way to install ``dissect.cobaltstrike`` is to use **pip**:
 
 .. code-block:: bash
 
