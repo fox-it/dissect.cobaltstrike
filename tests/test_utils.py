@@ -15,6 +15,12 @@ def test_packing():
     assert utils.p8(0x41) == b"A"
     assert utils.u8(b"A") == 0x41
 
+    assert utils.p64(0x800) == b"\x00\x08\x00\x00\x00\x00\x00\x00"
+    assert utils.u64(b"\x00\x08\x00\x00\x00\x00\x00\x00") == 0x800
+
+    assert utils.p64be(12345) == b"\x00\x00\x00\x00\x00\x0009"
+    assert utils.u64be(b"\x00\x00\x00\x00\x00\x0009") == 12345
+
     assert utils.unpack(b"ABCDEFGHIJ") == 0x4A494847464544434241
     assert utils.unpack_be(b"ABCDEFGHIJ") == 0x4142434445464748494A
 

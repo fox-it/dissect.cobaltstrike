@@ -74,6 +74,11 @@ p32 = partial(pack, size=4)
 u32be = partial(unpack, size=4, byteorder="big")
 p32be = partial(pack, size=4, byteorder="big")
 
+u64 = partial(unpack, size=8)
+p64 = partial(pack, size=8)
+u64be = partial(unpack, size=8, byteorder="big")
+p64be = partial(pack, size=8, byteorder="big")
+
 
 def iter_find_needle(
     fp: BinaryIO,
