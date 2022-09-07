@@ -175,6 +175,7 @@ dns_beacon_options: "set" "dns_idle" string ";" -> dns_idle
     | "set" "put_metadata" string ";"           -> put_metadata
     | "set" "put_output" string ";"             -> put_output
     | "set" "ns_response" string ";"            -> ns_response
+    | "#" "dns_resolver" string ";"             -> comment_dns_resolver
 
 header: string
 string: STRING
