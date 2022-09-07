@@ -126,6 +126,10 @@ class ConfigBlock:
     def set_config_block(self, option, config_block):
         self.tree.children.append(Tree(option, config_block.tree.children))
 
+    def set_non_empty_config_block(self, option, config_block):
+        if config_block.tree.children:
+            self.set_config_block(option, config_block)
+
     def set_option(self, option, value):
         value = value_to_string(value)
         self.tree.children.append(
@@ -390,6 +394,7 @@ class C2Profile(ConfigBlock):
         http_get_client = HttpOptionsBlock()
         http_post_client = HttpOptionsBlock()
         proc_inj = ProcessInjectBlock()
+        dns_beacon = DnsBeaconBlock()
         # http_get_server = HttpOptionsBlock()
 
         for setting, value in config.settings_by_index.items():
@@ -585,15 +590,37 @@ class C2Profile(ConfigBlock):
                     proc_inj.set_config_block("execute", exec_options)
             elif setting == BeaconSetting.SETTING_PROCINJ_ALLOCATOR:
                 proc_inj.set_option("allocator", "NtMapViewOfSection" if value else "VirtualAllocEx")
+            elif setting == BeaconSetting.SETTING_DNS_BEACON_BEACON:
+                dns_beacon.set_option("beacon", value)
+            elif setting == BeaconSetting.SETTING_DNS_BEACON_GET_A:
+                dns_beacon.set_option("get_a", value)
+            elif setting == BeaconSetting.SETTING_DNS_BEACON_GET_AAAA:
+                dns_beacon.set_option("get_aaaa", value)
+            elif setting == BeaconSetting.SETTING_DNS_BEACON_GET_TXT:
+                dns_beacon.set_option("get_txt", value)
+            elif setting == BeaconSetting.SETTING_DNS_BEACON_PUT_METADATA:
+                dns_beacon.set_option("put_metadata", value)
+            elif setting == BeaconSetting.SETTING_DNS_BEACON_PUT_OUTPUT:
+                dns_beacon.set_option("put_output", value)
+            elif setting == BeaconSetting.SETTING_DNSRESOLVER and value:
+                # this is not a c2profile setting, but a DNS Listener configuration option
+                dns_beacon.set_option("comment_dns_resolver", value)
+            elif setting == BeaconSetting.SETTING_DNS_IDLE:
+                dns_beacon.set_option("dns_idle", value)
+            elif setting == BeaconSetting.SETTING_DNS_SLEEP:
+                dns_beacon.set_option("dns_sleep", value)
+            elif setting == BeaconSetting.SETTING_MAXDNS:
+                dns_beacon.set_option("maxdns", value)
 
         if c2_recover:
-            http_get.set_config_block("server", HttpOptionsBlock(output=DataTransformBlock(steps=c2_recover)))
-        http_get.set_config_block("client", http_get_client)
-        profile.set_config_block("http_get", http_get)
-        http_post.set_config_block("client", http_post_client)
-        profile.set_config_block("http_post", http_post)
-        profile.set_config_block("stage", stage)
-        profile.set_config_block("process_inject", proc_inj)
+            http_get.set_non_empty_config_block("server", HttpOptionsBlock(output=DataTransformBlock(steps=c2_recover)))
+        http_get.set_non_empty_config_block("client", http_get_client)
+        profile.set_non_empty_config_block("http_get", http_get)
+        http_post.set_non_empty_config_block("client", http_post_client)
+        profile.set_non_empty_config_block("http_post", http_post)
+        profile.set_non_empty_config_block("stage", stage)
+        profile.set_non_empty_config_block("process_inject", proc_inj)
+        profile.set_non_empty_config_block("dns_beacon", dns_beacon)
         return profile
 
     def __str__(self) -> str:

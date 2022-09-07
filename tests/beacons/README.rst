@@ -35,8 +35,13 @@ All beacon fixtures has to be added to the `beacons` dictionary in the `conftest
             # x64 beacon
             "beacon_x64": "1897a6cdf17271807bd6ec7c60fffea3.bin.zip",
             # x86, custom xor key, stage prepend and append, custom MZ, custom PE
-            "beacon_custom_xorkey": "3fdf92571d10485b05904e35c635c655.bin.zip"
+            "beacon_custom_xorkey": "3fdf92571d10485b05904e35c635c655.bin.zip",
+            # dns beacon, custom xor key 0xaf, CS v4.3
+            "dns_beacon": "a1573fe60c863ed40fffe54d377b393a.bin.zip",
         }
 
-This dictionary is used to create dynamic fixtures based on the key namme.
-For example, the ``beacon_x86_file`` fixture will be automaticallt created by the code in ``conftest.py``.
+This dictionary is used to create dynamic fixtures based on the key name.
+The following fixtures are automatically created by code in ``conftest.py``:
+
+- ``{name}_file`` -- file object to the beacon file
+- ``{name}_path`` -- path to extracted beacon file on disk

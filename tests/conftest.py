@@ -14,6 +14,8 @@ beacons = {
     "beacon_x64": "1897a6cdf17271807bd6ec7c60fffea3.bin.zip",
     # x86 beacon, custom xor key, stage prepend and append, custom PE
     "beacon_custom_xorkey": "3fdf92571d10485b05904e35c635c655.bin.zip",
+    # dns beacon, custom xor key 0xaf, CS v4.3
+    "dns_beacon": "a1573fe60c863ed40fffe54d377b393a.bin.zip",
 }
 
 
