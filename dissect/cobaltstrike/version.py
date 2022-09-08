@@ -30,6 +30,7 @@ MAX_ENUM_TO_VERSION: Dict[int, str] = {
     59: "Cobalt Strike 4.2 (Nov 06, 2020)",
     70: "Cobalt Strike 4.3 (Mar 03, 2021)",
     73: "Cobalt Strike 4.5 (Dec 14, 2021)",
+    74: "Cobalt Strike 4.7 (Aug 17, 2022)",
 }
 """ Max setting enum to Cobalt Strike version mapping """
 
@@ -66,6 +67,7 @@ PE_EXPORT_STAMP_TO_VERSION: Dict[int, str] = {
     0x6255EB4E: "Cobalt Strike 4.6 (Apr 12, 2022)",
     0x6255EB6E: "Cobalt Strike 4.6 (Apr 12, 2022)",
     0x6255EB91: "Cobalt Strike 4.6 (Apr 12, 2022)",
+    0x62EBF2B8: "Cobalt Strike 4.7 (Aug 17, 2022)",
 }
 """ PE export timestamp to Cobalt Strike version mapping """
 

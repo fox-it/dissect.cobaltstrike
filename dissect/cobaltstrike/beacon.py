@@ -133,9 +133,13 @@ enum BeaconSetting: uint16 {
     SETTING_MAX_RETRY_STRATEGY_ATTEMPTS = 71,
     SETTING_MAX_RETRY_STRATEGY_INCREASE = 72,
     SETTING_MAX_RETRY_STRATEGY_DURATION = 73,
+
+    // CobaltStrike version >= 4.7 (Aug 17, 2022)
+    SETTING_MASKED_WATERMARK = 74,
 };
 
 enum DeprecatedBeaconSetting: uint16 {
+    SETTING_KILLDATE_YEAR = 16,
     SETTING_INJECT_OPTIONS = 36,
 };
 
@@ -579,6 +583,7 @@ SETTING_TO_PRETTYFUNC: Dict[BeaconSetting, Callable] = {
     BeaconSetting.SETTING_DNSRESOLVER: null_terminated_str,
     BeaconSetting.SETTING_DNS_IDLE: lambda x: str(ipaddress.IPv4Address(x)),
     BeaconSetting.SETTING_WATERMARKHASH: lambda x: null_terminated_bytes(x) if isinstance(x, bytes) else x,
+    BeaconSetting.SETTING_MASKED_WATERMARK: lambda x: x.hex()
     # BeaconSetting.SETTING_PROTOCOL: lambda x: BeaconProtocol(x).name,
     # BeaconSetting.SETTING_CRYPTO_SCHEME: lambda x: CryptoScheme(x).name,
     # BeaconSetting.SETTING_PROXY_BEHAVIOR: lambda x: ProxyServer(x).name,
