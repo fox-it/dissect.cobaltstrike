@@ -38,6 +38,9 @@ OPTION: "sample_name"
     | "amsi_disable"            // moved to post-ex since Cobalt Strike 3.14
     | "create_remote_thread"    // deprecated since Cobalt Strike 3.12
     | "hijack_remote_thread"    // deprecated since Cobalt Strike 3.12
+    | "tasks_max_size"          // introduced in Cobalt Strike 4.6
+    | "tasks_proxy_max_size"	// introduced in Cobalt Strike 4.6
+    | "tasks_dns_proxy_max_size"// introduced in Cobalt Strike 4.6
 
 http_config_options: "set" "headers" string ";"     -> headers
     | "header" string string ";"                    -> header
