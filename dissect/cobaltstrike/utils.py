@@ -32,12 +32,12 @@ def retain_file_offset(fobj, offset=None, whence=io.SEEK_SET):
 
     Args:
         fobj: file-like object
-        offset: offset to seek to relative to position indicated by `whence`. If `None` no seek will be done.
-        whence: default is `SEEK_SET`, values for whence are:
+        offset: offset to seek to relative to position indicated by `whence`. If ``None`` no seek will be done.
+        whence: default is ``SEEK_SET``, values for `whence` are:
 
-            - SEEK_SET or 0 – start of the stream (the default); offset should be zero or positive
-            - SEEK_CUR or 1 – current stream position; offset may be negative
-            - SEEK_END or 2 – end of the stream; offset is usually negative
+            - ``SEEK_SET`` or ``0`` – start of the stream (the default); offset should be zero or positive
+            - ``SEEK_CUR`` or ``1`` – current stream position; offset may be negative
+            - ``SEEK_END`` or ``2`` – end of the stream; offset is usually negative
 
     Returns:
         context manager
