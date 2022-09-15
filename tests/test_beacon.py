@@ -1,5 +1,6 @@
 import io
 import sys
+import hashlib
 import subprocess
 from unittest.mock import patch
 
@@ -284,3 +285,11 @@ def test_main(capfdbinary, request, fixture, options, ret, stdout, stderr):
         assert stdout in cap.out
     if stderr:
         assert stderr in cap.err
+
+
+def test_beacon_public_key(beacon_x86_file):
+    bconfig = beacon.BeaconConfig.from_file(beacon_x86_file)
+    assert bconfig.public_key == bytes.fromhex(
+        "30819f300d06092a864886f70d010101050003818d0030818902818100c9bc2d82418688a2e4f8d645ca54dacce652ef725189444fa2def7acfaf0b40000d45933eceb80e7fc1e1e2a540a3e96c2ffc22026369d0ff07da59898f1752593876f69a80b763042abbb92c52f8a85556c5f8e8b052060231684e007a866fc010f69f4c1d79e236b1b90cbc3861bf9b3a366cf5dac02d39519dafc717dece50203010001"  # noqa: 501
+    )
+    assert hashlib.sha256(bconfig.public_key).hexdigest() == bconfig.settings["SETTING_PUBKEY"]
