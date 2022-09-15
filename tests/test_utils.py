@@ -67,3 +67,14 @@ def test_random_stager_uri():
 
     assert utils.is_stager_x86(utils.random_stager_uri(length=100))
     assert utils.is_stager_x64(utils.random_stager_uri(x64=True))
+
+
+def test_netbios():
+    assert utils.netbios_encode(b"hello world") == b"GIGFGMGMGPCAHHGPHCGMGE"
+    assert utils.netbios_encode(b"hello world", ord("A")) == b"GIGFGMGMGPCAHHGPHCGMGE"
+    assert utils.netbios_encode(b"hello world", ord("a")) == b"gigfgmgmgpcahhgphcgmge"
+    assert utils.netbios_decode(b"gigfgmgmgpcahhgphcgmge", ord("a")) == b"hello world"
+    assert (
+        utils.netbios_decode(b"ENFKOIAAAAAAAAFLIJNPFCEFFFIJOFIBMDBCHLAAAAPPNDGI")
+        == b"MZ\xe8\x00\x00\x00\x00[\x89\xdfREU\x89\xe5\x81\xc3\x12{\x00\x00\xff\xd3h"
+    )

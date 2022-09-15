@@ -25,6 +25,43 @@ def xor(data: bytes, key: bytes) -> bytes:
     return bytes(data)
 
 
+def netbios_encode(data: bytes, offset: int = 0x41) -> bytes:
+    """Encode `data` using NetBIOS encoding and return the encoded bytes.
+
+    Args:
+        data: bytes to be NetBIOS encoded
+        offset: offset used for encoding, defaults to char ``A`` (``0x41``)
+
+    Returns:
+        NetBIOS encoded bytes
+    """
+    barray = []
+    for c in bytearray(data):
+        a = ((c & 0xF0) >> 4) + offset
+        b = (c & 0x0F) + offset
+        barray.append(a)
+        barray.append(b)
+    return bytes(barray)
+
+
+def netbios_decode(data: bytes, offset: int = 0x41) -> bytes:
+    """Decode the netbios encoded `data` and return the decoded bytes.
+
+    Args:
+        data: bytes to be NetBIOS decoded
+        offset: offset used for decoding, defaults to char ``A`` (``0x41``)
+
+    Returns:
+        NetBIOS decoded bytes
+    """
+    barray = []
+    for i in range(0, len(data), 2):
+        a = (data[i] - offset) << 4
+        b = data[i + 1] - offset
+        barray.append(a + b)
+    return bytes(barray)
+
+
 @contextmanager
 def retain_file_offset(fobj, offset=None, whence=io.SEEK_SET):
     """Return a context manager that changes the position of the file-like object `fobj` to the given byte `offset`.
