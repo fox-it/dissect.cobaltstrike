@@ -924,6 +924,11 @@ class BeaconConfig:
             return BeaconVersion.from_pe_export_stamp(self.pe_export_stamp)
         return BeaconVersion.from_max_setting_enum(self.max_setting_enum)
 
+    @property
+    def public_key(self) -> bytes:
+        """The RSA public key used by the Beacon in DER format."""
+        return self.raw_settings.get("SETTING_PUBKEY", b"").rstrip(b"\x00")
+
 
 def build_parser():
     import argparse
