@@ -46,7 +46,30 @@ def test_beacon_versions():
     assert ver.tuple == (3, 4)
     assert ver.date == datetime.date(2016, 7, 29)
 
+    ver = version.BeaconVersion.from_pe_export_stamp(1661785372)
+    assert ver.version == "Cobalt Strike 4.7.1 (Sep 16, 2022)"
+    assert ver.tuple == (4, 7, 1)
+    assert ver.date == datetime.date(2022, 9, 16)
+
     a = version.BeaconVersion("Cobalt Strike 4.5 (Dec 14, 2021)")
     b = version.BeaconVersion("Cobalt Strike 4.5 (Dec 14, 2021)")
     assert a == b
     assert hash(a) == hash(b)
+
+
+def test_version_parsing():
+    for pe_export_stamp, version_string in version.PE_EXPORT_STAMP_TO_VERSION.items():
+        bversion = version.BeaconVersion(version_string)
+        assert int(pe_export_stamp)
+        assert bversion.date
+        assert bversion.tuple
+        assert bversion.version
+
+
+def test_pe_export_stamp_ordering():
+    export_stamps = version.PE_EXPORT_STAMP_TO_VERSION.keys()
+    assert list(export_stamps) == sorted(export_stamps), "Export stamps are not in order"
+
+    bversions = [version.BeaconVersion(ver) for ver in version.PE_EXPORT_STAMP_TO_VERSION.values()]
+    dates = [b.date for b in bversions]
+    assert list(dates) == sorted(dates), "Dates are not in order"
