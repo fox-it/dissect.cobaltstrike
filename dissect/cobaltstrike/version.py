@@ -12,7 +12,7 @@ Cobalt Strike version of beacon payloads.
 import re
 import datetime
 
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Union
 
 MAX_ENUM_TO_VERSION: Dict[int, str] = {
     20: "Cobalt Strike 3.4 (Jul 29, 2016)",
@@ -68,6 +68,9 @@ PE_EXPORT_STAMP_TO_VERSION: Dict[int, str] = {
     0x6255EB6E: "Cobalt Strike 4.6 (Apr 12, 2022)",
     0x6255EB91: "Cobalt Strike 4.6 (Apr 12, 2022)",
     0x62EBF2B8: "Cobalt Strike 4.7 (Aug 17, 2022)",
+    0x62EBF2F9: "Cobalt Strike 4.7 (Aug 17, 2022)",
+    0x630CD51C: "Cobalt Strike 4.7.1 (Sep 16, 2022)",
+    0x630CD559: "Cobalt Strike 4.7.1 (Sep 16, 2022)",
 }
 """ PE export timestamp to Cobalt Strike version mapping """
 
@@ -75,20 +78,24 @@ PE_EXPORT_STAMP_TO_VERSION: Dict[int, str] = {
 class BeaconVersion(str):
     """Helper class for dealing with Cobalt Strike version strings"""
 
-    REGEX_VERSION = r"Cobalt Strike (?P<major>\d+)\.(?P<minor>\d+) \((?P<date>.*)\)"
+    REGEX_VERSION = r"Cobalt Strike (?P<major>\d+)\.(?P<minor>\d+)(\.(?P<patch>\d+))? \((?P<date>.*)\)"
 
-    def __init__(self, version: str):
+    def __init__(self, version: str) -> None:
         self.version: str = version
         """full version string including date, e.g. ``"Cobalt Strike 4.5 (Dec 14, 2021)"``"""
-        self.tuple: Optional[Tuple[int, int]] = None
-        """the version as tuple of (major, minor), e.g. ``(4, 5)``. Otherwise, ``None``."""
+        self.tuple: Optional[Union[Tuple[int, int], Tuple[int, int, int]]] = None
+        """the version as tuple of (major, minor) or (major, minor, patch), e.g. ``(4, 5)`` or ``(4, 7, 1)``.
+        Otherwise, ``None``."""
         self.date: Optional[datetime.date] = None
         """date of version as :class:`datetime.date` object, e.g. ``datetime.date(2021, 12, 14)``.
         Otherwise, ``None``."""
         m = re.match(self.REGEX_VERSION, version)
         if m:
             self.date = datetime.datetime.strptime(m.group("date"), "%b %d, %Y").date()
-            self.tuple = (int(m.group("major")), int(m.group("minor")))
+            if m.group("patch"):
+                self.tuple = (int(m.group("major")), int(m.group("minor")), int(m.group("patch")))
+            else:
+                self.tuple = (int(m.group("major")), int(m.group("minor")))
 
     @classmethod
     def from_pe_export_stamp(cls, pe_export_stamp: int) -> "BeaconVersion":
@@ -113,8 +120,8 @@ class BeaconVersion(str):
             return "Unknown"
         return ".".join(map(str, self.tuple))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.version
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<BeaconVersion {self.version!r}, tuple={self.tuple}, date={self.date}>"
