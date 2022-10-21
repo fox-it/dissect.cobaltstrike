@@ -19,7 +19,7 @@ The library is available on PyPI. Use ``pip`` to install it::
 
     $ pip install dissect.cobaltstrike
 
-**dissect.cobaltstrike** requires Python 3.6 or later.
+**dissect.cobaltstrike** requires Python 3.7 or later.
 
 Documentation
 -------------
