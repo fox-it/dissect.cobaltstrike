@@ -43,8 +43,9 @@ Now that the beacons are extracted, we inspect the `RSA Public Key` of the beaco
 Our goal is to find out if we can find a matching RSA **Private** Key on VirusTotal. When we query VirusTotal for the Public Key bytes we can
 find that there are some malware samples but also a file called ``Cobalt Strike 4.3.zip``. 
 
-.. image:: ../images/vt-cobaltstrike-43-zip.png
-   :alt: Leaked version of Cobalt Strike containing a RSA Private Key
+.. figure:: ../images/vt-cobaltstrike-43-zip.png
+
+   Leaked version of Cobalt Strike 4.3 (hash redacted)
 
 This is a leaked version of Cobalt Strike containing a file called ``.cobaltstrike.beacon_keys``, embedded in this file is a RSA **private** key.
 which we can extract using the following Python script :doc:`dump_beacon_keys.py <../scripts/dump_beacon_keys>`
