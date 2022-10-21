@@ -244,13 +244,13 @@ class HttpBeaconClient:
         self.arch = random.choice(["x86", "x64"]) if arch is None else arch
         self.barch = self.arch if barch is None else barch
         self.high_integrity = high_integrity
-        if barch == "x64":
+        if self.barch == "x64":
             flag |= 0x2
 
-        if arch == "x64":
+        if self.arch == "x64":
             flag |= 0x4
 
-        if high_integrity:
+        if self.high_integrity:
             flag |= 0x8
 
         ver_major, ver_minor, ver_build = random_windows_ver()
