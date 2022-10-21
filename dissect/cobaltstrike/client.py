@@ -32,7 +32,12 @@ try:
 except ImportError:
     raise ImportError("httpx is required for the HTTP beacon client, install it with `pip install httpx`")
 
-from flow.record import RecordWriter
+try:
+    from flow.record import RecordWriter
+except ImportError:
+    raise ImportError(
+        "flow.record is required for writing Beacon records, please install it with `pip install flow.record`"
+    )
 
 # Local imports
 from dissect.cobaltstrike.c2 import (

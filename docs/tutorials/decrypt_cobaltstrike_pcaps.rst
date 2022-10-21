@@ -41,7 +41,7 @@ If you don't provide ``--extract-beacons`` then it will try to find the (first) 
 Now that the beacons are extracted, we inspect the `RSA Public Key` of the beacons using ``beacon-dump -t raw <beacon> | grep PUBKEY``.
 
 Our goal is to find out if we can find a matching RSA **Private** Key on VirusTotal. When we query VirusTotal for the Public Key bytes we can
-find that there are some malware samples but also a file called ``Cobalt Strike 4.3.zip``. 
+find that there are some malware samples but also a file called ``Cobalt Strike 4.3.zip``.
 
 .. figure:: ../images/vt-cobaltstrike-43-zip.png
 
