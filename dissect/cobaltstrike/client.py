@@ -359,9 +359,10 @@ class HttpBeaconClient:
         )
 
         url = urllib.parse.urljoin(self.base_url, req.uri.decode())
+        params = {k.decode(): v.decode() for k, v in req.params.items()}
         try:
             response = httpx.request(
-                req.method, url, headers=req.headers, params=req.params, content=req.body, verify=self.verify
+                req.method, url, headers=req.headers, params=params, content=req.body, verify=self.verify
             )
             response.raise_for_status()
         except httpx.RequestError as exc:
@@ -405,9 +406,10 @@ class HttpBeaconClient:
 
         # Construct url for callback
         url = urllib.parse.urljoin(self.base_url, req.uri.decode())
+        params = {k.decode(): v.decode() for k, v in req.params.items()}
         try:
             response = httpx.request(
-                req.method, url, headers=req.headers, params=req.params, content=req.body, verify=self.verify
+                req.method, url, headers=req.headers, params=params, content=req.body, verify=self.verify
             )
             response.raise_for_status()
         except httpx.RequestError as exc:
