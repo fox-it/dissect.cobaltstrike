@@ -6,9 +6,17 @@ build:
     python: "3.10"
 
 python:
+  version: "3.7"
   install:
-    - requirements: docs/requirements.txt
+    # equivalent to: pip install .[all]
     - method: pip
       path: .
+      extra_requirements:
+        - all
+    # equivalent to: pip install .[docs]
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
 
 formats: all
