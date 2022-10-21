@@ -16,7 +16,7 @@ beacon functionality such as excuting commands or listing files and does not sen
 If you want to know how to implement your own custom beacon client that can respond to tasks, please refer to
 this :doc:`tutorial <../tutorials/minimal_beacon_client>`.
 
-The ``--writer`` parameter of ``beacon-client`` allows you to log the retrieved `beacon tasks`` to a file.
+The ``--writer`` parameter of ``beacon-client`` allows you to log the retrieved `beacon tasks` to a file.
 This can be useful for debugging or logging of tasks that are being sent.
 The output is written as `flow.record` records and can be dumped using the tool ``rdump`` which is part of
 the `flow.record`_ package and is installed as a dependency.
