@@ -27,8 +27,8 @@ except ModuleNotFoundError:
 # -- Project information -----------------------------------------------------
 
 project = "dissect.cobaltstrike"
-copyright = "2022, NCC Group / Fox-IT"
-author = "NCC Group / Fox-IT"
+copyright = "2022, Fox-IT part of NCC Group"
+author = "Fox-IT part of NCC Group"
 
 
 # -- General configuration ---------------------------------------------------

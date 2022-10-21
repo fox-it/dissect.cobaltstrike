@@ -15,6 +15,18 @@ Python 3.6 or higher is required and it has the following dependencies:
 .. _dissect.cstruct: https://github.com/fox-it/dissect.cstruct
 .. _lark: https://github.com/lark-parser/lark
 
+The following pip `extras` flavours are provided as well:
+
+.. code-block:: bash
+
+    $ pip install dissect.cobaltstrike[c2]
+    $ pip install dissect.cobaltstrike[pcap]
+    $ pip install dissect.cobaltstrike[full]
+
+* ``[c2]`` for if you want to communicate with Cobalt Strike Team Servers, eg: :doc:`tools/beacon-client`.
+* ``[pcap]`` for if you want to parse and decrypt PCAPS containing Beacon traffic, eg: :doc:`tools/beacon-pcap`.
+* ``[full]`` provides the above but also installs ``rich`` for prettier console logging.
+
 Installing from source
 ----------------------
 
@@ -24,7 +36,7 @@ If you want to install ``dissect.cobaltstrike`` from source, you can use the fol
 
      $ git clone https://github.com/fox-it/dissect.cobaltstrike.git
      $ cd dissect.cobaltstrike
-     $ pip install --editable .
+     $ pip install --editable .[full]
 
 Using a virtual environment is recommended. Using the ``--editable`` flag ensures that any changes you make to the source code directly affects the installed package.
 

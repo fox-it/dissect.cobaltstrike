@@ -24,6 +24,8 @@ Source code can be found here:
 
    installation
    examples
+   tutorials/index
+   scripts/index
 
 .. toctree::
    :maxdepth: 1
@@ -41,6 +43,12 @@ Source code can be found here:
    structures/index
    c2profile-grammar
 
+.. toctree::
+   :caption: Links
+
+   GitHub Repository <https://github.com/fox-it/dissect.cobaltstrike>
+   GitHub Discussions <https://github.com/fox-it/dissect.cobaltstrike/discussions>
+   Python Package Index <https://pypi.org/project/dissect.cobaltstrike>
 
 Indices and tables
 ==================

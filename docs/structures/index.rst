@@ -11,3 +11,4 @@ Structure definitions
 
    cs_def
    pe_def
+   c2_def

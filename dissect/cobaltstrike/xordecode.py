@@ -7,6 +7,7 @@ import os
 import sys
 import logging
 import collections
+import contextlib
 from typing import BinaryIO, Iterator, Union, cast
 
 from dissect.cobaltstrike.utils import catch_sigpipe, iter_find_needle, xor, u32
@@ -117,7 +118,7 @@ class XorEncodedFile(io.RawIOBase):
 
     @classmethod
     def from_path(cls, path: Union[str, os.PathLike], maxrange: int = 1024) -> "XorEncodedFile":
-        """Constructs a XorEncodedFile from path `path`, raises ValueError if file not determined as a XorEncoded Beacon.
+        """Constructs a :class:`XorEncodedFile` from path `path`.
 
         This is more of a convience method as it calls :meth:`XorEncodedFile.from_file` under the hood.
 
@@ -174,7 +175,9 @@ class XorEncodedFile(io.RawIOBase):
         return data[:n]
 
 
-def build_parser():
+@catch_sigpipe
+def main():
+    """Entrypoint for :doc:`/tools/beacon-xordecode`"""
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -200,14 +203,6 @@ def build_parser():
         default="-",
         help="write decoded payload to FILE",
     )
-    return parser
-
-
-@catch_sigpipe
-def main():
-    """Entrypoint for beacon-xordecode."""
-
-    parser = build_parser()
     args = parser.parse_args()
 
     levels = [logging.WARNING, logging.INFO, logging.DEBUG]
@@ -224,7 +219,12 @@ def main():
 
     logger.info("Processing file: {!r}".format(args.input))
     fout = args.output.buffer if hasattr(args.output, "buffer") else args.output
-    with open(args.input, "rb") as fin:
+    if args.input in ("-", "/dev/stdin"):
+        fin = io.BytesIO(sys.stdin.buffer.read())
+    else:
+        fin = open(args.input, "rb")
+
+    with contextlib.closing(fin):
         if args.nonce_offset is not None:
             fxor = XorEncodedFile(fin, nonce_offset=args.nonce_offset)
         else:

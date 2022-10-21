@@ -37,5 +37,6 @@ You can still use the ``-n`` or ``--nonce-offset`` option to manually specify th
 
 .. sphinx_argparse_cli::
   :module: dissect.cobaltstrike.xordecode
-  :func: build_parser
+  :func: main
+  :hook:
   :prog: beacon-xordecode

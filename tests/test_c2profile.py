@@ -263,14 +263,14 @@ def test_c2profile_dns_beacon(dns_beacon_file):
     bconfig = beacon.BeaconConfig.from_file(dns_beacon_file, xor_keys=[b"\xaf"])
     profile = c2profile.C2Profile.from_beacon_config(bconfig)
 
-    profile.properties["dns-beacon.dns_idle"] == ["19.7.91.241"]
-    profile.properties["dns-beacon.maxdns"] == ["251"]
-    profile.properties["dns-beacon.beacon"] == ["smtp."]
-    profile.properties["dns-beacon.get_A"] == ["up."]
-    profile.properties["dns-beacon.get_AAAA"] == ["box."]
-    profile.properties["dns-beacon.get_TXT"] == ["lantern."]
-    profile.properties["dns-beacon.put_metadata"] == ["test."]
-    profile.properties["dns-beacon.put_output"] == ["answer."]
+    assert profile.properties["dns-beacon.dns_idle"] == ["19.7.91.241"]
+    assert profile.properties["dns-beacon.maxdns"] == ["251"]
+    assert profile.properties["dns-beacon.beacon"] == ["smtp."]
+    assert profile.properties["dns-beacon.get_A"] == ["up."]
+    assert profile.properties["dns-beacon.get_AAAA"] == ["box."]
+    assert profile.properties["dns-beacon.get_TXT"] == ["lantern."]
+    assert profile.properties["dns-beacon.put_metadata"] == ["test."]
+    assert profile.properties["dns-beacon.put_output"] == ["answer."]
 
     assert "dns-beacon {" in str(profile)
     assert 'set beacon "smtp.";' in str(profile)
