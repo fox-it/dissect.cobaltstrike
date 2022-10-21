@@ -8,11 +8,13 @@ import sys
 import errno
 import random
 import string
+import reprlib
 import itertools
+from collections import OrderedDict
 from functools import partial, wraps
 from contextlib import contextmanager
 
-from typing import BinaryIO, Iterator
+from typing import BinaryIO, Iterator, NamedTuple
 
 
 def xor(data: bytes, key: bytes) -> bytes:
@@ -112,14 +114,14 @@ def catch_sigpipe(func):
     return wrapper
 
 
-def unpack(data: bytes, size: int = None, byteorder="little") -> int:
-    return int.from_bytes(data[:size], byteorder=byteorder)
+def unpack(data: bytes, size: int = None, byteorder="little", signed=False) -> int:
+    return int.from_bytes(data[:size], byteorder=byteorder, signed=signed)
 
 
-def pack(n: int, size: int = None, byteorder="little") -> bytes:
+def pack(n: int, size: int = None, byteorder="little", signed=False) -> bytes:
     if size is None:
         size = (n.bit_length() + 7) // 8
-    return n.to_bytes(size, byteorder=byteorder)
+    return n.to_bytes(size, byteorder=byteorder, signed=signed)
 
 
 unpack_be = partial(unpack, byteorder="big")
@@ -229,3 +231,55 @@ def random_stager_uri(*, x64: bool = False, length: int = 4) -> str:
         )
         if is_stager(uri):
             return uri
+
+
+def namedtuple_reprlib_repr(nt: NamedTuple) -> str:
+    """Return a `reprlib` version of __repr__ for namedtuple `nt`"""
+    return "{name}({fields})".format(
+        name=nt.__class__.__name__,
+        fields=", ".join(f"{field}=" + reprlib.repr(getattr(nt, field)) for field in nt._fields),
+    )
+
+
+def enable_reprlib_cstruct():
+    """Enable `reprlib` style __repr__ for `dissect.cstruct` instances."""
+    from dissect.cstruct.types.instance import Instance
+
+    def reprlib_repr(self) -> str:
+        values = ", ".join(f"{k}={hex(v) if isinstance(v, int) else reprlib.repr(v)}" for k, v in self._values.items())
+        return f"<{self._type.name} {values}>"
+
+    Instance.__repr__ = reprlib_repr
+
+
+def enable_reprlib_flow_record():
+    """Enable `reprlib` style __repr__ for `flow.record` instances."""
+    from flow.record import Record
+
+    def reprlib_repr(self) -> str:
+        return "<{} {}>".format(
+            self._desc.name, " ".join("{}={}".format(k, reprlib.repr(getattr(self, k))) for k in self._desc.fields)
+        )
+
+    Record.__repr__ = reprlib_repr
+
+
+class LRUDict(OrderedDict):
+    "Limit size, evicting the least recently looked-up key when full"
+
+    def __init__(self, maxsize=128, *args, **kwds):
+        self.maxsize = maxsize
+        super().__init__(*args, **kwds)
+
+    def __getitem__(self, key):
+        value = super().__getitem__(key)
+        self.move_to_end(key)
+        return value
+
+    def __setitem__(self, key, value):
+        if key in self:
+            self.move_to_end(key)
+        super().__setitem__(key, value)
+        if len(self) > self.maxsize:
+            oldest = next(iter(self))
+            del self[oldest]

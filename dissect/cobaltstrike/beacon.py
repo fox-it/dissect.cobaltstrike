@@ -871,6 +871,15 @@ class BeaconConfig:
         return list(dict.fromkeys(domain for (domain, _uri) in self.domain_uri_pairs))
 
     @property
+    def submit_uri(self) -> Optional[str]:
+        """The submit URI that the beacon uses for sending callback data.
+        Example value::
+
+            '/submit.php'
+        """
+        return self.settings.get("SETTING_SUBMITURI", None)
+
+    @property
     def killdate(self) -> Optional[str]:
         """Normalized kill date as YYYY-mm-dd string or ``None`` if not defined in Beacon.
 
@@ -904,6 +913,11 @@ class BeaconConfig:
         return BeaconProtocol(protocol).name
 
     @property
+    def port(self) -> Optional[int]:
+        """The port the Beacon uses for communication, e.g. ``80``, ``443``. ``None`` if not defined in config."""
+        return self.raw_settings.get("SETTING_PORT", None)
+
+    @property
     def watermark(self) -> Optional[int]:
         """Beacon watermark (also known as customer or authorization id)."""
         return self.raw_settings.get("SETTING_WATERMARK", None)
@@ -928,6 +942,16 @@ class BeaconConfig:
     def public_key(self) -> bytes:
         """The RSA public key used by the Beacon in DER format."""
         return self.raw_settings.get("SETTING_PUBKEY", b"").rstrip(b"\x00")
+
+    @property
+    def sleeptime(self) -> Optional[int]:
+        """The sleep time in milliseconds the Beacon uses between communication attempts."""
+        return self.raw_settings.get("SETTING_SLEEPTIME", None)
+
+    @property
+    def jitter(self) -> Optional[int]:
+        """The jitter in milliseconds the Beacon uses between communication attempts."""
+        return self.raw_settings.get("SETTING_JITTER", None)
 
 
 def build_parser():

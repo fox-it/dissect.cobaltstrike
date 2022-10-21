@@ -4,3 +4,4 @@ sphinx-autoapi
 sphinx-copybutton
 sphinx-argparse-cli
 ipython
+httpx

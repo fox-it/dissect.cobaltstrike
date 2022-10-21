@@ -30,6 +30,17 @@ def test_packing():
     assert utils.u8(b"12345") == 0x31
 
 
+def test_packing_signed():
+    assert utils.u32be(b"\xff\xff\xff\xfe", signed=True) == -2
+    assert utils.p32be(-2, signed=True) == b"\xff\xff\xff\xfe"
+
+    assert utils.pack(-1, signed=True) == b"\xff"
+    assert utils.unpack(b"\xff", signed=True) == -1
+
+    assert utils.p64(-1, signed=True) == b"\xff\xff\xff\xff\xff\xff\xff\xff"
+    assert utils.p16be(-100, signed=True) == b"\xff\x9c"
+
+
 def test_xor():
     assert utils.xor(b"hello", b"world") == b"\x1f\n\x1e\x00\x0b"
     assert utils.xor(b"goodbye", b"\x01") == b"fnnecxd"
