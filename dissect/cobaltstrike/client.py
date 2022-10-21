@@ -376,6 +376,9 @@ class HttpBeaconClient:
                 reason=response.reason_phrase,
             )
             for packet in self.c2http.iter_recover_http(req):
+                if packet.command == BeaconCommand.COMMAND_NOOP:
+                    logger.debug("Received NOOP packet: %s", packet)
+                    continue
                 return packet
         return None
 
