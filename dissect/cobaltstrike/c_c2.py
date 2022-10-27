@@ -195,6 +195,24 @@ c2struct.load(C2_DEF)
 
 # Some wrapper classes for some dissect.cstruct structs, mainly so we can use `isinstance()`
 class BeaconMetadata(cstruct.Instance):
+    magic: int
+    size: int
+    aes_rand: bytes
+    ansi_cp: int
+    oem_cp: int
+    bid: int
+    pid: int
+    port: int
+    flag: int
+    ver_major: int
+    ver_minor: int
+    ver_build: int
+    ptr_x64: int
+    ptr_gmh: int
+    ptr_gpa: int
+    ip: int
+    info: bytes
+
     def __init__(self, *args, **kwargs):
         instance = c2struct.BeaconMetadata(*args, **kwargs)
         super().__init__(instance._type, instance._values, instance._sizes)
@@ -207,6 +225,11 @@ class BeaconMetadata(cstruct.Instance):
 
 
 class CallbackPacket(cstruct.Instance):
+    counter: int
+    size: int
+    callback: BeaconCallback
+    data: bytes
+
     def __init__(self, *args, **kwargs):
         instance = c2struct.CallbackPacket(*args, **kwargs)
         super().__init__(instance._type, instance._values, instance._sizes)
@@ -219,6 +242,12 @@ class CallbackPacket(cstruct.Instance):
 
 
 class TaskPacket(cstruct.Instance):
+    epoch: int
+    total_size: int
+    command: BeaconCommand
+    size: int
+    data: bytes
+
     def __init__(self, *args, **kwargs):
         instance = c2struct.TaskPacket(*args, **kwargs)
         super().__init__(instance._type, instance._values, instance._sizes)
