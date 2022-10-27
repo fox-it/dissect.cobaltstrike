@@ -173,6 +173,7 @@ class HttpBeaconClient:
         self,
         bconfig: BeaconConfig,
         dry_run=False,
+        scheme=None,
         domain=None,
         port=None,
         beacon_id=None,
@@ -226,6 +227,9 @@ class HttpBeaconClient:
         if self.bconfig.protocol not in ("http", "https"):
             raise ValueError("Not a HTTP or HTTPS beacon!")
 
+        if scheme and scheme not in ("http", "https"):
+            raise ValueError("Scheme must be either 'http' or 'https'")
+
         self.user = random_username_name() if user is None else user
         self.computer = random_computer_name(self.user) if computer is None else computer
         self.process = random_process_name() if process is None else process
@@ -272,7 +276,7 @@ class HttpBeaconClient:
         self.domain = domain or random.choice(self.bconfig.domains)
         self.uri = random.choice(self.bconfig.uris)
 
-        self.scheme = self.bconfig.protocol
+        self.scheme = self.bconfig.protocol if scheme is None else scheme
         self.port = port or self.bconfig.port
         self.base_url = f"{self.scheme}://{self.domain}:{self.port}"
 
