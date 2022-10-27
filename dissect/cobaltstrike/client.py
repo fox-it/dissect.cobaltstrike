@@ -391,7 +391,7 @@ class HttpBeaconClient:
             self.writer.write(c2packet_to_record(packet))
             self.writer.flush()
 
-        enc_packet = encrypt_packet(packet.dumps(), **self.c2http.default_keys._asdict())
+        enc_packet = encrypt_packet(packet.dumps(), **self.c2http.beacon_keys._asdict())
 
         # Transform data into a HTTP request
         req = self.c2http.transform_submit.transform(
