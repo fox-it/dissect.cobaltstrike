@@ -9,7 +9,6 @@ import errno
 import random
 import string
 import reprlib
-import itertools
 from collections import OrderedDict
 from functools import partial, wraps
 from contextlib import contextmanager
@@ -223,12 +222,7 @@ def random_stager_uri(*, x64: bool = False, length: int = 4) -> str:
     is_stager = is_stager_x64 if x64 else is_stager_x86
     chars = string.ascii_letters + string.digits
     while True:
-        uri = "/" + "".join(
-            itertools.islice(
-                iter(partial(random.choice, chars), None),
-                length,
-            )
-        )
+        uri = "/" + "".join(random.choice(chars) for _ in range(length))
         if is_stager(uri):
             return uri
 

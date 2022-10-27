@@ -292,7 +292,7 @@ class HttpDataTransform:
             elif step == "header":
                 assert isinstance(step_val, bytes)
                 headers[step_val] = data
-            elif step == "_header":
+            elif step == "_header" or step == "_hostheader":
                 assert isinstance(step_val, bytes)
                 key, _, val = step_val.partition(b": ")
                 headers[key] = val
@@ -309,7 +309,7 @@ class HttpDataTransform:
                 elif step_val == "metadata":
                     data = c2data.metadata or b""
             else:
-                raise ValueError("Unknown step: %r with value: %r", (step, step_val))
+                raise ValueError("Unknown transform step with value: {}".format((step, step_val)))
         return request._replace(body=body, params=params, uri=uri, headers=headers)
 
     @overload
@@ -375,10 +375,10 @@ class HttpDataTransform:
                     build_id = data
                 elif step_val == "metadata":
                     build_metadata = data
-            elif step == "_header":
+            elif step in ("_header", "_hostheader"):
                 pass
             else:
-                raise ValueError("Unknown step: %r with value: %r", (step, step_val))
+                raise ValueError("Unknown recover step with value: {}".format((step, step_val)))
 
         if isinstance(http, HttpRequest):
             return ClientC2Data(output=build_output, id=build_id, metadata=build_metadata)
@@ -450,7 +450,7 @@ class C2Http:
         self.metadata_cache: Dict[bytes, BeaconMetadata] = {}
 
         # Default decryption keys
-        self.default_keys = BeaconKeys(aes_key=self.aes_key, hmac_key=self.hmac_key)
+        self.beacon_keys = BeaconKeys(aes_key=self.aes_key, hmac_key=self.hmac_key)
 
     def get_transform_for_http(self, http: Union[HttpRequest, HttpResponse, bytes]) -> HttpDataTransform:
         """Return the correct :class:`HttpDataTransform` instance for given `http`.
@@ -492,7 +492,7 @@ class C2Http:
             C2Packet: A :class:`C2Packet` object for each decrypted packet found in the HTTP request or response.
         """
         http = parse_raw_http(http) if isinstance(http, bytes) else http
-        keys = keys or self.default_keys
+        keys = keys or self.beacon_keys
 
         transform = self.get_transform_for_http(http)
         c2data = transform.recover(http)
@@ -504,9 +504,9 @@ class C2Http:
                 metadata = decrypt_metadata(c2data.metadata, self.priv)
                 self.metadata_cache[c2data.metadata] = metadata
                 # if we do not have an AES key or HMAC key yet, we derive it.
-                if not all([self.default_keys.aes_key, self.default_keys.hmac_key]):
+                if not all([self.beacon_keys.aes_key, self.beacon_keys.hmac_key]):
                     aes_key, hmac_key = derive_aes_hmac_keys(metadata.aes_rand)
-                    self.default_keys = BeaconKeys(aes_key, hmac_key)
+                    self.beacon_keys = BeaconKeys(aes_key, hmac_key)
                     logging.info("Derived AES + HMAC keys from %r", metadata)
             yield metadata
 

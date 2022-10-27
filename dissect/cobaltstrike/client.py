@@ -20,8 +20,6 @@ import argparse
 import datetime
 import ipaddress
 import logging
-import functools
-import itertools
 
 # Typing imports
 from typing import Union, Optional, Tuple, Any, Dict, List, Callable
@@ -90,7 +88,7 @@ def random_computer_name(username: Optional[str] = None) -> str:
     padding_len = len(template) - len(hostname)
 
     chars = string.ascii_uppercase + string.digits
-    padding = "".join(itertools.islice(iter(functools.partial(random.choice, chars), None), padding_len))
+    padding = "".join(random.choice(chars) for _ in range(padding_len))
     hostname = hostname + padding
     return hostname
 
@@ -175,6 +173,7 @@ class HttpBeaconClient:
         self,
         bconfig: BeaconConfig,
         dry_run=False,
+        scheme=None,
         domain=None,
         port=None,
         beacon_id=None,
@@ -207,8 +206,8 @@ class HttpBeaconClient:
         self.verify = False
 
         # uneven beacon_id's are considered SSH sessions so we ensure that it's even.
-        self.beacon_id = beacon_id or (random.getrandbits(32) & 0x7FFFFFFF)
-        self.beacon_id = self.beacon_id - self.beacon_id % 2
+        self.beacon_id = beacon_id if beacon_id is not None else (random.getrandbits(32) & 0x7FFFFFFF)
+        self.beacon_id = (self.beacon_id - self.beacon_id % 2) & 0xFFFFFFFF
         if self.beacon_id > 0x7FFFFFFF:
             raise ValueError("beacon_id must be less or equal than 2147483647")
 
@@ -227,6 +226,9 @@ class HttpBeaconClient:
 
         if self.bconfig.protocol not in ("http", "https"):
             raise ValueError("Not a HTTP or HTTPS beacon!")
+
+        if scheme and scheme not in ("http", "https"):
+            raise ValueError("Scheme must be either 'http' or 'https'")
 
         self.user = random_username_name() if user is None else user
         self.computer = random_computer_name(self.user) if computer is None else computer
@@ -274,7 +276,7 @@ class HttpBeaconClient:
         self.domain = domain or random.choice(self.bconfig.domains)
         self.uri = random.choice(self.bconfig.uris)
 
-        self.scheme = self.bconfig.protocol
+        self.scheme = self.bconfig.protocol if scheme is None else scheme
         self.port = port or self.bconfig.port
         self.base_url = f"{self.scheme}://{self.domain}:{self.port}"
 
@@ -368,7 +370,9 @@ class HttpBeaconClient:
         except httpx.RequestError as exc:
             self.logger.error("An error occurred while requesting %r : %r", exc.request.url, exc)
         except httpx.HTTPStatusError as exc:
-            self.logger.error("Error response %s while requesting %r.", exc.response.status_code, exc.request.url)
+            self.logger.error(
+                "HttpStatusError, response %s while requesting %r.", exc.response.status_code, exc.request.url
+            )
         else:
             req = HttpResponse(
                 body=response.content,
@@ -393,7 +397,7 @@ class HttpBeaconClient:
             self.writer.write(c2packet_to_record(packet))
             self.writer.flush()
 
-        enc_packet = encrypt_packet(packet.dumps(), **self.c2http.default_keys._asdict())
+        enc_packet = encrypt_packet(packet.dumps(), **self.c2http.beacon_keys._asdict())
 
         # Transform data into a HTTP request
         req = self.c2http.transform_submit.transform(
@@ -415,7 +419,9 @@ class HttpBeaconClient:
         except httpx.RequestError as exc:
             self.logger.error("An error occurred while requesting %r : %r", exc.request.url, exc)
         except httpx.HTTPStatusError as exc:
-            self.logger.error("Error response %s while requesting %r.", exc.response.status_code, exc.request.url)
+            self.logger.error(
+                "HttpStatusError, response %s while requesting %r.", exc.response.status_code, exc.request.url
+            )
 
     def handle(self, command: Union[None, int, BeaconCommand]):
         """decorator to register a handler for `command`, if ``None`` it registers a handler for empty tasks"""

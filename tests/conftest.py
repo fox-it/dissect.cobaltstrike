@@ -57,17 +57,31 @@ def generate_beacon_path_fixture(filename):
     return my_fixture
 
 
+def generate_beacon_bconfig_fixture(name):
+    @pytest.fixture()
+    def my_fixture(request):
+        path_fixture = request.getfixturevalue(f"{name}_path")
+        return beacon.BeaconConfig.from_path(path_fixture, xor_keys=[b"\x69", b"\x2e", b"\xaf", b"\xcc"])
+
+    return my_fixture
+
+
 def inject_beacon_file_fixture(name, filename):
-    globals()[name] = generate_beacon_file_fixture(filename)
+    globals()[f"{name}_file"] = generate_beacon_file_fixture(filename)
 
 
 def inject_beacon_path_fixture(name, filename):
-    globals()[name] = generate_beacon_path_fixture(filename)
+    globals()[f"{name}_path"] = generate_beacon_path_fixture(filename)
+
+
+def inject_beacon_bconfig_fixture(name):
+    globals()[f"{name}_bconfig"] = generate_beacon_bconfig_fixture(name)
 
 
 for name, filename in beacons.items():
-    inject_beacon_file_fixture(f"{name}_file", filename)
-    inject_beacon_path_fixture(f"{name}_path", filename)
+    inject_beacon_file_fixture(name, filename)
+    inject_beacon_path_fixture(name, filename)
+    inject_beacon_bconfig_fixture(name)
 
 
 @contextmanager
