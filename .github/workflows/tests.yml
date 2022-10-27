@@ -43,7 +43,7 @@ jobs:
       run: |
         tox -e py3
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         env_vars: PYTHON
         files: coverage.xml
