@@ -206,8 +206,8 @@ class HttpBeaconClient:
         self.verify = False
 
         # uneven beacon_id's are considered SSH sessions so we ensure that it's even.
-        self.beacon_id = beacon_id or (random.getrandbits(32) & 0x7FFFFFFF)
-        self.beacon_id = self.beacon_id - self.beacon_id % 2
+        self.beacon_id = beacon_id if beacon_id is not None else (random.getrandbits(32) & 0x7FFFFFFF)
+        self.beacon_id = (self.beacon_id - self.beacon_id % 2) & 0xFFFFFFFF
         if self.beacon_id > 0x7FFFFFFF:
             raise ValueError("beacon_id must be less or equal than 2147483647")
 
