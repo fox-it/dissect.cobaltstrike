@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11-dev"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -42,6 +42,9 @@ jobs:
     - name: Test via tox
       run: |
         tox -e py3
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+
   test-pypy3:
     runs-on: ubuntu-latest
     strategy:
