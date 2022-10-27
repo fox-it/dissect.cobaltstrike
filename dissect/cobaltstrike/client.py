@@ -20,8 +20,6 @@ import argparse
 import datetime
 import ipaddress
 import logging
-import functools
-import itertools
 
 # Typing imports
 from typing import Union, Optional, Tuple, Any, Dict, List, Callable
@@ -90,7 +88,7 @@ def random_computer_name(username: Optional[str] = None) -> str:
     padding_len = len(template) - len(hostname)
 
     chars = string.ascii_uppercase + string.digits
-    padding = "".join(itertools.islice(iter(functools.partial(random.choice, chars), None), padding_len))
+    padding = "".join(random.choice(chars) for _ in range(padding_len))
     hostname = hostname + padding
     return hostname
 
