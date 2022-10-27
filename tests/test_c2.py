@@ -71,10 +71,10 @@ def bconfig(c2test_beacon_path) -> BeaconConfig:
 
 
 @pytest.fixture
-def c2http(bconfig) -> C2Http:
+def c2http(c2test_beacon_bconfig) -> C2Http:
     aes_rand = bytes.fromhex("caeab4f452fe41182d504aa24966fbd0")
     aes_key, hmac_key = derive_aes_hmac_keys(aes_rand)
-    return C2Http(bconfig, aes_key=aes_key, hmac_key=hmac_key, rsa_private_key=rsa_private)
+    return C2Http(c2test_beacon_bconfig, aes_key=aes_key, hmac_key=hmac_key, rsa_private_key=rsa_private)
 
 
 def test_parse_raw_http_request():
@@ -253,8 +253,7 @@ def test_c2http_recover_with_aes_key_and_no_hmac(bconfig):
     c2http = C2Http(bconfig, aes_key=aes_key, hmac_key=None)
 
     with pytest.raises(ValueError, match="Cannot verify signature without hmac_key."):
-        for packet in c2http.iter_recover_http(http_response_task_file_list):
-            assert packet.command == BeaconCommand.COMMAND_FILE_LIST
+        list(c2http.iter_recover_http(http_response_task_file_list))
 
 
 def test_c2http_recover_with_aes_key_and_no_hmac_no_verify(bconfig):
@@ -281,32 +280,28 @@ def test_c2http_recover_with_aes_key_and_hmac(bconfig):
     aes_key, hmac_key = derive_aes_hmac_keys(aes_rand)
     c2http = C2Http(bconfig, aes_key=aes_key, hmac_key=hmac_key)
 
-    client_packets = []
-    server_packets = []
-    for packet in c2http.iter_recover_http(http_request_checkin):
-        client_packets.append(packet)
-    for packet in c2http.iter_recover_http(http_response_task_file_list):
-        server_packets.append(packet)
-        assert packet.command == BeaconCommand.COMMAND_FILE_LIST
+    client_packets = list(c2http.iter_recover_http(http_request_checkin))
+    server_packets = list(c2http.iter_recover_http(http_response_task_file_list))
 
     assert len(client_packets) == 0
     assert len(server_packets) == 1
+
+    assert server_packets[0].command == BeaconCommand.COMMAND_FILE_LIST
 
 
 def test_c2http_recover_with_aes_rand_only(bconfig):
     aes_rand = bytes.fromhex("caeab4f452fe41182d504aa24966fbd0")
     c2http = C2Http(bconfig, aes_rand=aes_rand, rsa_private_key=rsa_private)
 
-    client_packets = []
-    server_packets = []
-    for packet in c2http.iter_recover_http(http_request_checkin):
-        client_packets.append(packet)
-    for packet in c2http.iter_recover_http(http_response_task_file_list):
-        server_packets.append(packet)
-        assert packet.command == BeaconCommand.COMMAND_FILE_LIST
+    client_packets = list(c2http.iter_recover_http(http_request_checkin))
+    server_packets = list(c2http.iter_recover_http(http_response_task_file_list))
 
     assert len(client_packets) == 1
     assert len(server_packets) == 1
+
+    assert isinstance(client_packets[0], BeaconMetadata)
+    assert client_packets[0].bid == 105175268
+    assert server_packets[0].command == BeaconCommand.COMMAND_FILE_LIST
 
 
 def test_c2http_recover_with_rsa_private_only(bconfig):
