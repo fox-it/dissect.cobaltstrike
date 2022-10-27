@@ -370,7 +370,9 @@ class HttpBeaconClient:
         except httpx.RequestError as exc:
             self.logger.error("An error occurred while requesting %r : %r", exc.request.url, exc)
         except httpx.HTTPStatusError as exc:
-            self.logger.error("Error response %s while requesting %r.", exc.response.status_code, exc.request.url)
+            self.logger.error(
+                "HttpStatusError, response %s while requesting %r.", exc.response.status_code, exc.request.url
+            )
         else:
             req = HttpResponse(
                 body=response.content,
@@ -417,7 +419,9 @@ class HttpBeaconClient:
         except httpx.RequestError as exc:
             self.logger.error("An error occurred while requesting %r : %r", exc.request.url, exc)
         except httpx.HTTPStatusError as exc:
-            self.logger.error("Error response %s while requesting %r.", exc.response.status_code, exc.request.url)
+            self.logger.error(
+                "HttpStatusError, response %s while requesting %r.", exc.response.status_code, exc.request.url
+            )
 
     def handle(self, command: Union[None, int, BeaconCommand]):
         """decorator to register a handler for `command`, if ``None`` it registers a handler for empty tasks"""
