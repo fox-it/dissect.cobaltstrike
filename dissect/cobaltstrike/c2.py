@@ -292,7 +292,7 @@ class HttpDataTransform:
             elif step == "header":
                 assert isinstance(step_val, bytes)
                 headers[step_val] = data
-            elif step == "_header":
+            elif step == "_header" or step == "_hostheader":
                 assert isinstance(step_val, bytes)
                 key, _, val = step_val.partition(b": ")
                 headers[key] = val
@@ -309,7 +309,7 @@ class HttpDataTransform:
                 elif step_val == "metadata":
                     data = c2data.metadata or b""
             else:
-                raise ValueError("Unknown step: %r with value: %r", (step, step_val))
+                raise ValueError("Unknown transform step with value: {}".format((step, step_val)))
         return request._replace(body=body, params=params, uri=uri, headers=headers)
 
     @overload
@@ -375,10 +375,10 @@ class HttpDataTransform:
                     build_id = data
                 elif step_val == "metadata":
                     build_metadata = data
-            elif step == "_header":
+            elif step in ("_header", "_hostheader"):
                 pass
             else:
-                raise ValueError("Unknown step: %r with value: %r", (step, step_val))
+                raise ValueError("Unknown recover step with value: {}".format((step, step_val)))
 
         if isinstance(http, HttpRequest):
             return ClientC2Data(output=build_output, id=build_id, metadata=build_metadata)
