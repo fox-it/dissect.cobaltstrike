@@ -28,7 +28,7 @@ First we install ``dissect.cobaltstrike`` with the ``[c2]`` extra, as we are goi
 
     $ pip install dissect.cobaltstrike[c2]
 
-This installs the necessary dependencies such as `Pycryptodome` and `httpx`.
+This installs the necessary dependencies such as `PyCryptodome` and `httpx`.
 
 Basic client
 ------------
@@ -37,7 +37,7 @@ The are two ways of implementing a Beacon client, first is to subclass ``HttpBea
 a ``HttpBeaconClient`` and use `decorators` to register task handlers on this instance. We will use the decorator method in
 the following steps but also show how to implement it using a subclass at the end of this tutorial.
 
-Here is a basic client that can do check-ins but has no task handlers.
+Here is a basic client that can do check-ins but has no task handlers:
 
 .. code-block:: python
     :caption: myclient.py
@@ -62,7 +62,7 @@ Let's break down what the current script is doing:
     args, options = parse_commandline_options()
     client.run(**options)
 
-We first import ``HttpBeaconClient`` and ``parse_commandline_options``.
+We first import :class:`~dissect.cobaltstrike.client.HttpBeaconClient` and :meth:`~dissect.cobaltstrike.client.parse_commandline_options`.
 
 .. code-block:: python
     :caption: myclient02.py
@@ -75,7 +75,7 @@ We first import ``HttpBeaconClient`` and ``parse_commandline_options``.
     args, options = parse_commandline_options()
     client.run(**options)
 
-We instantiate a ``HttpBeaconClient()`` and store this in the (global) variable ``client``.
+We instantiate a :class:`~dissect.cobaltstrike.client.HttpBeaconClient` and store this in the (global) variable ``client``.
 
 .. code-block:: python
     :caption: myclient03.py
@@ -88,10 +88,22 @@ We instantiate a ``HttpBeaconClient()`` and store this in the (global) variable 
     args, options = parse_commandline_options()
     client.run(**options)
 
-We now call ``parse_commandline_options()`` which uses a builtin ``ArgumentParser`` with common beacon client options
+We now call :meth:`~dissect.cobaltstrike.client.parse_commandline_options` which uses a builtin ``ArgumentParser`` with common beacon client options
 and return this as ``args`` and a dictionary ``options`` which can be passed to our ``run()`` method.
 
-The double ``**options`` expands the ``options`` as keyword arguments so you don't have to manually pass keyword options arguments like this:
+.. code-block:: python
+    :caption: myclient03.py
+    :emphasize-lines: 6
+
+    from dissect.cobaltstrike.client import HttpBeaconClient, parse_commandline_options
+
+    client = HttpBeaconClient()
+
+    args, options = parse_commandline_options()
+    client.run(**options)
+
+We then run the client with our options, the double ``**options`` expands the ``options`` as keyword arguments so you
+don't have to manually pass keyword options arguments to ``run()`` like this:
 
 .. code-block:: python
 
@@ -105,7 +117,7 @@ Let's implement a task handler in the next section!
 Task handler
 ^^^^^^^^^^^^
 
-We are going to implement a Task handler when the ``ls`` command is issued from the Team Server to the beacon:
+We are going to implement a Task handler when the ``ls`` command is issued from the Team Server to our Beacon client:
 
 .. code-block:: python
     :caption: myclient_ls_01.py
@@ -123,7 +135,8 @@ We are going to implement a Task handler when the ``ls`` command is issued from 
     args, options = parse_commandline_options()
     client.run(**options)
 
-We import ``BeaconCommand`` and ``TaskPacket`` here to make things easier when using an IDE such as VSCode for autocompletion.
+We import :class:`~dissect.cobaltstrike.c_c2.BeaconCommand` and :class:`~dissect.cobaltstrike.c_c2.TaskPacket` here to
+make things easier when using an IDE such as VSCode for autocompletion.
 
 .. code-block:: python
     :caption: myclient_ls_02.py
@@ -172,7 +185,7 @@ Next we decorate this function with ``@client.handle()`` passing in the ``COMMAN
 This registers the method as a handler for when a ``COMMAND_FILE_LIST`` command is Tasked by the Team Server.
 For a complete list of `COMMANDS` you can refer to :class:`~dissect.cobaltstrike.c_c2.BeaconCommand`.
 
-When we know run the client and receive a ``ls`` Task we will see:
+When we now run the client and receive a ``ls`` Task we will see:
 
 .. code-block:: bash
 
@@ -236,7 +249,8 @@ Here is an example on how to parse the ``task.data`` for a ``COMMAND_FILE_LIST``
     args, options = parse_commandline_options()
     client.run(**options)
 
-We first need some extra imports so we can easier parse data, ``BytesIO`` and ``u32be`` which reads a uint32 value in Big Endian.
+We first need some extra imports so we can easier parse data, ``BytesIO`` for reading bytes as a file-like object
+and ``u32be`` to read bytes as an uint32 value in Big Endian.
 
 .. code-block:: python
     :caption: myclient_parse_ls_02.py
@@ -303,8 +317,8 @@ Instead of printing stuff locally, let's make it more interesting by sending bac
     args, options = parse_commandline_options()
     client.run(**options)
 
-We first import a new helper function called ``CallbackDebugMessage`` which we can use to create a debug message that is
-printed on the Team Server side.
+We first import a new helper function called :meth:`~dissect.cobaltstrike.client.CallbackDebugMessage` which we can use to create a debug message that is
+printed on the Team Server console.
 
 .. code-block:: python
     :caption: myclient_ls_callback_02.py
@@ -334,11 +348,12 @@ printed on the Team Server side.
     args, options = parse_commandline_options()
     client.run(**options)
 
-Here we return a ``CallbackDebugMessage`` with our custom string, which the Team Server will receive and output as a debug message.
+Here we return a :meth:`~dissect.cobaltstrike.client.CallbackDebugMessage` with our custom string, which the
+Team Server will receive and output as a debug message.
 
 .. figure:: ../images/teamserver_ls.png
 
-    Debug message shown on the Team Server side
+    Debug message shown on the Team Server console
 
 Ofcourse this is not your standard response to a ``ls`` command, you can
 see :doc:`scripts/example_client.py <../scripts/example_client>` that does implement a proper ``ls`` response.
@@ -386,7 +401,7 @@ When the command ``COMMAND_SLEEP`` is tasked it will call ``on_sleep`` and we mo
 The ``on_catch_all`` is a special handler that will be called when no handlers are registered for the given Task, acting
 as a `catch_all` function. This is the same as the ``@client.catch_all`` decorator.
 
-When we run the ``echo_client.py`` we see our issued Tasks being echoed back on the Team Server side:
+When we run the ``echo_client.py`` we see our issued Tasks being echoed back on the Team Server console:
 
 .. code-block:: bash
 
@@ -394,7 +409,7 @@ When we run the ``echo_client.py`` we see our issued Tasks being echoed back on 
 
 .. figure:: ../images/teamserver-echoclient.png
 
-    Echo client echoing all TaskPackets back to the Team Server side
+    Echo beacon client echoing all TaskPackets back to the Team Server console
 
 Next steps
 ----------
