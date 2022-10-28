@@ -9,7 +9,7 @@ from dissect.cobaltstrike.beacon import BeaconConfig
 from dissect.cobaltstrike.utils import catch_sigpipe, LRUDict, enable_reprlib_cstruct, enable_reprlib_flow_record
 from dissect.cobaltstrike import utils
 from dissect.cobaltstrike.c2 import C2Http, HttpRequest, HttpResponse, parse_raw_http, C2Packet, enable_reprlib_c2
-from dissect.cobaltstrike.c_c2 import BeaconMetadata
+from dissect.cobaltstrike.c_c2 import BeaconMetadata, BeaconCommand, BeaconCallback
 
 try:
     from flow.record import RecordWriter, RecordDescriptor, extend_record, Record
@@ -69,7 +69,7 @@ def c2packet_to_record(c2packet: C2Packet) -> Record:
             ftype = "bytes"
         elif ftype == "uint8":
             ftype = "varint"
-        elif ftype in ("BeaconTask", "BeaconCallback", "BeaconMetadata"):
+        elif ftype in (BeaconCommand.__name__, BeaconCallback.__name__, BeaconMetadata.__name__):
             ftype = "string"
             kv[field.name] = kv[field.name].name
         elif field.name == "epoch":
