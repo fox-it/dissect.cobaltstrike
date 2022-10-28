@@ -20,6 +20,7 @@ Source code can be found here:
 
 .. toctree::
    :maxdepth: 2
+   :includehidden:
    :caption: Overview
 
    installation

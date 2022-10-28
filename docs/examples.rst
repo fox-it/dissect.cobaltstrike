@@ -34,9 +34,9 @@ Beacon Configuration
 The main class for dealing with Cobalt Strike Beacon configuration is :class:`~dissect.cobaltstrike.beacon.BeaconConfig`.
 It's recommended to instantiate the class by using one of the following constructors:
 
- - :meth:`BeaconConfig.from_file() <dissect.cobaltstrike.beacon.BeaconConfig.from_file>`
- - :meth:`BeaconConfig.from_path() <dissect.cobaltstrike.beacon.BeaconConfig.from_path>`
- - :meth:`BeaconConfig.from_bytes() <dissect.cobaltstrike.beacon.BeaconConfig.from_bytes>`
+- :meth:`BeaconConfig.from_file() <dissect.cobaltstrike.beacon.BeaconConfig.from_file>`
+- :meth:`BeaconConfig.from_path() <dissect.cobaltstrike.beacon.BeaconConfig.from_path>`
+- :meth:`BeaconConfig.from_bytes() <dissect.cobaltstrike.beacon.BeaconConfig.from_bytes>`
 
 These `from_` constructors will handle :class:`XorEncoded <dissect.cobaltstrike.xordecode>` beacons
 by default and tries the default `XOR` keys used for obfuscating the beacon configuration. It raises
