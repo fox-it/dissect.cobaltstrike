@@ -433,6 +433,9 @@ class C2Http:
                 f"RSA PrivateKey does not match PublicKey pair, {self.priv.n:#x} != {self.pub.n:#x}"
             )
 
+        if self.bconfig.is_trial:
+            raise ValueError("Trial beacons are not yet supported, please submit an issue")
+
         # Get the different URIs used by the beacon for matching HTTP requests (note everything is in bytes)
         self.submit_uri: bytes = bconfig.settings["SETTING_SUBMITURI"].encode()
         self.submit_verb: bytes = bconfig.settings["SETTING_C2_VERB_POST"].encode()
