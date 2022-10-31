@@ -51,7 +51,7 @@ def iter_nonce_offsets(fh: BinaryIO, real_size: int = None, maxrange: int = 1024
 
 
 class XorEncodedFile(io.RawIOBase):
-    """A file object providing transparant decoding of XorEncoded files.
+    """A file object providing transparent decoding of XorEncoded files.
 
     To verify if a file is a XorEncoded Beacon, use the :meth:`XorEncodedFile.from_file()` constructor
     which raises ``ValueError`` if it cannot find a nonce candidate or valid MZ header.
@@ -120,7 +120,7 @@ class XorEncodedFile(io.RawIOBase):
     def from_path(cls, path: Union[str, os.PathLike], maxrange: int = 1024) -> "XorEncodedFile":
         """Constructs a :class:`XorEncodedFile` from path `path`.
 
-        This is more of a convience method as it calls :meth:`XorEncodedFile.from_file` under the hood.
+        This is more of a convenience method as it calls :meth:`XorEncodedFile.from_file` under the hood.
 
         Args:
             path: path or path-like to xorencoded file

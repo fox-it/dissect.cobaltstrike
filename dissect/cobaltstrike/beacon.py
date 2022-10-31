@@ -244,7 +244,7 @@ def find_beacon_config_bytes(fh: BinaryIO, xorkey: bytes) -> Iterator[bytes]:
        # which translates to the following bytes
        b"\x00\x01\x00\x01\x00\x02\x00"
 
-    These bytes are used in conjuction with the XOR key for finding the (potential) start of a configuration block.
+    These bytes are used in conjunction with the XOR key for finding the (potential) start of a configuration block.
 
     Args:
         fh: file object
