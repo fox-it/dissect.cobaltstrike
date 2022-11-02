@@ -50,7 +50,7 @@ The test suite uses ``pytest`` and using ``tox`` is the recommended way to run t
      $ pip install tox
      $ tox
 
-This wil run tests on both Python 3 and PyPy3. To limit to Python 3 only, run:
+This will run tests on both Python 3 and PyPy3. To limit to Python 3 only, run:
 
 .. code-block:: shell
 

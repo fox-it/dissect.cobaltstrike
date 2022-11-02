@@ -1,6 +1,6 @@
 :attr:`dissect.cobaltstrike.c_c2.C2_DEF`
 ----------------------------------------
-Sructures for parsing C2 headers.
+Structures for parsing C2 headers.
 
 .. literalinclude:: ../../dissect/cobaltstrike/c_c2.py
         :start-after: C2_DEF

@@ -210,7 +210,7 @@ def random_stager_uri(*, x64: bool = False, length: int = 4) -> str:
 
     Args:
         x64: generate a x64 stager URI if ``True``, ``False`` for a x86 stager URI. (default: ``False``)
-        length: length of URI to generate, exluding the "/" prefix. (default: 4)
+        length: length of URI to generate, excluding the "/" prefix. (default: 4)
 
     Returns:
         random stager URI

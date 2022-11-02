@@ -628,7 +628,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def parse_commandline_options(parser=None, defaults=None) -> Tuple[argparse.Namespace, Dict[str, Any]]:
-    """Helper function to parse commandline options and return a typle of (args, options).
+    """Helper function to parse commandline options and return a tuple of (args, options).
 
     This method is useful for creating default commandline options for a Beacon client.
     The returned options can be passed to :meth:`HttpBeaconClient.run()` as follows:
