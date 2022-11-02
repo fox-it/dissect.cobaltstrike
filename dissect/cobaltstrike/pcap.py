@@ -102,11 +102,11 @@ class BeaconCapture:
 
     Args:
         pcap: A PCAP file containing Cobalt Strike traffic
-        nss: Keylog file containg the client random and masterkey in NSS format
+        nss: NSSKEYLOGFILE containing the client random and masterkey in NSS format
         aes_key: AES key used in the beacon session
         hmac_key: hmac key used in the beacon session (optional)
         c2: IP address of the Cobalt Strike C2 server
-        config: A Cobalt Strike :class:`BeaconConfig` configuration
+        config: A Cobalt Strike :class:`~dissect.cobaltstrike.beacon.BeaconConfig` configuration
         filter: A Wireshark display filter used for filtering the pcap
     """
 
@@ -211,7 +211,7 @@ class BeaconCapture:
                 # Keep track of HTTP requests so we can match this against HTTP responses.
                 self.packet_number_to_request[packet.number] = http
             elif isinstance(http, HttpResponse) and hasattr(packet.http, "request_in"):
-                # If this is a HTTP reponse, try to find the matching HTTP request object
+                # If this is a HTTP response, try to find the matching HTTP request object
                 http_req = self.packet_number_to_request.get(int(packet.http.request_in))
                 http = http._replace(request=http_req) if http_req else http
 

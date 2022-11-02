@@ -11,7 +11,7 @@ retrieve Tasks like a real beacon.
     use `rich <https://rich.readthedocs.io/en/stable/>`_ to render the console logging which can be easier on the eyes.
 
 The implementation of the client in ``beacon-client`` is observing only, meaning it does not implement any of the
-beacon functionality such as excuting commands or listing files and does not send any Callback data to the Team Server.
+beacon functionality such as executing commands or listing files and does not send any Callback data to the Team Server.
 
 If you want to know how to implement your own custom beacon client that can respond to tasks, please refer to
 this :doc:`tutorial <../tutorials/minimal_beacon_client>`.
@@ -40,7 +40,7 @@ can connect to it again later without creating a new beacon session at the Team 
 * The ``--user`` and ``--computer`` arguments are used to set the username and computer name in the Beacon Metadata.
 * and ``-w`` or ``--writer`` writes decrypted C2 packets such as Tasks and Callback packets to the file ``c2.records.gz``.
 
-There are many more options that can be overriden, by default most settings are randomized. To see all the options run
+There are many more options that can be overridden, by default most settings are randomized. To see all the options run
 it with ``--help`` and is also documented here: :ref:`CLI-interface`.
 
 Dumping saved records

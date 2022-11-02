@@ -216,7 +216,7 @@ Notice that the client sent some `portscan` data back, we can inspect the portsc
 As you can see it's quite easy and powerful to be able to inspect the beacon traffic stored as records using ``rdump``.
 This is a great way to get a quick overview of the traffic and to extract the relevant data you need for further analysis.
 
-It can also output the data as ``json`` if that is preferred, by using the ``-j / --json`` argument:
+``rdump`` has many different output formats, such as ``json`` by using the ``-j / --json`` argument:
 
 .. code-block:: bash
 
@@ -226,7 +226,7 @@ It can also output the data as ``json`` if that is preferred, by using the ``-j 
      "packet_ts": "2021-06-15T15:08:55.172675",
      "src_ip": "10.0.0.134",
      "src_port": 52886,
-     "dst_ip": "<redacted>",
+     "dst_ip": "5.252.177.17",
      "dst_port": 443,
      "raw_http": "R0VUIC9hY3Rpdml0eSBIVFRQLzEuMQ0KQWNjZXB0OiAqLyoNCkNvb2tpZToga1IvT1RGTWhDWVFwdjA5Y1hsMlI3cUVlc3BWVWZRLzhZYWhBYnMxYityRUVTYlN6Y0FjNDRSOUtsZjR6SDRHR1l4VDRkRXJ6TlFXaW1tTVc1d1FWUVNFR0ZaMzZtV2MvYmVvVVRRVUdWVXhjWldYbDB0OFdCTzEycUM2dnNtUlNWNXVRTytxeHowTGJ6MVAvd09rV3diTk0wWEY5TGhWalJyR1lTUjBKbHJjPQ0KVXNlci1BZ2VudDogTW96aWxsYS80LjAgKGNvbXBhdGlibGU7IE1TSUUgNy4wOyBXaW5kb3dzIE5UIDUuMTsgLk5FVCBDTFIgMi4wLjUwNzI3KQ0KSG9zdDogNS4yNTIuMTc3LjE3OjQ0Mw0KQ29ubmVjdGlvbjogS2VlcC1BbGl2ZQ0KQ2FjaGUtQ29udHJvbDogbm8tY2FjaGUNCg0K",
      "magic": 48879,
@@ -249,7 +249,7 @@ It can also output the data as ``json`` if that is preferred, by using the ``-j 
    ...
    {
      "packet_ts": "2021-06-15T15:09:56.371968",
-     "src_ip": "<redacted>",
+     "src_ip": "5.252.177.17",
      "src_port": 443,
      "dst_ip": "10.0.0.134",
      "dst_port": 52894,
