@@ -4,6 +4,7 @@ This module is responsible for extracting and parsing configuration from Cobalt 
 import os
 import io
 import sys
+import time
 import hashlib
 import logging
 import ipaddress
@@ -1032,6 +1033,29 @@ def main():
         settings = config.settings
         for setting, value in settings.items():
             print(f"{setting} = {value!r}")
+        if args.verbose >= 1:
+            print("-" * 50)
+            print(
+                "pe_export_stamp = {}, {}, {}".format(
+                    config.pe_export_stamp,
+                    hex(config.pe_export_stamp),
+                    time.ctime(config.pe_export_stamp),
+                )
+            )
+            print(
+                "pe_compile_stamp = {}, {}, {}".format(
+                    config.pe_compile_stamp,
+                    hex(config.pe_compile_stamp),
+                    time.ctime(config.pe_compile_stamp),
+                )
+            )
+            print(
+                "max_setting_enum = {} - {}".format(
+                    config.max_setting_enum,
+                    BeaconSetting(config.max_setting_enum),
+                )
+            )
+            print("beacon_version =", config.version)
     elif args.type == "c2profile":
         profile = c2profile.C2Profile.from_beacon_config(config)
         print(profile.as_text())
