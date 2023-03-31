@@ -38,6 +38,10 @@ All beacon fixtures has to be added to the `beacons` dictionary in the `conftest
             "beacon_custom_xorkey": "3fdf92571d10485b05904e35c635c655.bin.zip",
             # dns beacon, custom xor key 0xaf, CS v4.3
             "dns_beacon": "a1573fe60c863ed40fffe54d377b393a.bin.zip",
+            # c2test beacon, beacon used in test_c2.py
+            "c2test_beacon": "37882262c9b5e971067fd989b26afe28.bin.zip",
+            # beacon with unicode in domain
+            "punycode_beacon": "5a197a8bb628a2555f5a86c51b85abd7.bin.zip",
         }
 
 This dictionary is used to create dynamic fixtures based on the key name.
