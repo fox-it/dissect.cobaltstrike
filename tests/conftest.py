@@ -18,6 +18,8 @@ beacons = {
     "dns_beacon": "a1573fe60c863ed40fffe54d377b393a.bin.zip",
     # c2test beacon, beacon used in test_c2.py
     "c2test_beacon": "37882262c9b5e971067fd989b26afe28.bin.zip",
+    # beacon with unicode in domain
+    "punycode_beacon": "5a197a8bb628a2555f5a86c51b85abd7.bin.zip",
 }
 
 

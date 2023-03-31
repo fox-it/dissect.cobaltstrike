@@ -548,7 +548,7 @@ def null_terminated_str(data: bytes) -> str:
     >>> null_terminated_str(b"Goodbye\xffPlanet\x00\x00")
     'GoodbyePlanet'
     """
-    return null_terminated_bytes(data).decode("ascii", "ignore")
+    return null_terminated_bytes(data).decode("latin-1", "ignore")
 
 
 SETTING_TO_PRETTYFUNC: Dict[BeaconSetting, Callable] = {

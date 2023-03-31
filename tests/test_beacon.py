@@ -28,7 +28,7 @@ def test_beacon_from_file(beacon_x64_file):
 
 
 def test_beacon_from_path(beacon_x86_file, tmp_path):
-    with (tmp_path / "beacon_x86.bin") as p:
+    with tmp_path / "beacon_x86.bin" as p:
         p.write_bytes(beacon_x86_file.read())
         bconfig = beacon.BeaconConfig.from_path(p)
         assert len(bconfig.domains)
@@ -36,7 +36,7 @@ def test_beacon_from_path(beacon_x86_file, tmp_path):
         assert bconfig.xorencoded
         assert bconfig.protocol == "https"
 
-    with (tmp_path / "bacon.bin") as p:
+    with tmp_path / "bacon.bin" as p:
         p.write_bytes(b"no bacon for you")
         with pytest.raises(ValueError, match="No valid Beacon configuration found"):
             beacon.BeaconConfig.from_path(p)
@@ -293,3 +293,21 @@ def test_beacon_public_key(beacon_x86_file):
         "30819f300d06092a864886f70d010101050003818d0030818902818100c9bc2d82418688a2e4f8d645ca54dacce652ef725189444fa2def7acfaf0b40000d45933eceb80e7fc1e1e2a540a3e96c2ffc22026369d0ff07da59898f1752593876f69a80b763042abbb92c52f8a85556c5f8e8b052060231684e007a866fc010f69f4c1d79e236b1b90cbc3861bf9b3a366cf5dac02d39519dafc717dece50203010001"  # noqa: 501
     )
     assert hashlib.sha256(bconfig.public_key).hexdigest() == bconfig.settings["SETTING_PUBKEY"]
+
+    raw_pubkey = bconfig.raw_settings["SETTING_PUBKEY"]
+    assert len(raw_pubkey) == 256
+
+    # verify fingerprints, eg: openssl rsa -in /tmp/pubkey.der -pubin -inform der -outform der | openssl md5 -c
+    assert hashlib.md5(bconfig.public_key).hexdigest() == "cb6d6430483e678947467b68fe27e6cf"
+    assert hashlib.sha1(bconfig.public_key).hexdigest() == "242c5b67aedc5a93cd0df9091f600a6605b92ecc"
+    assert (
+        hashlib.sha256(bconfig.public_key).hexdigest()
+        == "71fab2149cbdce552f00e6d75372494d3f7755d366fd6849a6d5c9e0f73bc40f"
+    )
+
+
+def test_beacon_domains_punycode(punycode_beacon_file):
+    bconfig = beacon.BeaconConfig.from_file(punycode_beacon_file)
+    assert bconfig.domains == ["kçi.com"]
+    assert bconfig.domains[0].encode("idna") == b"xn--ki-4ia.com"
+    assert b"k\xe7i.com" in bconfig.raw_settings["SETTING_DOMAINS"]
