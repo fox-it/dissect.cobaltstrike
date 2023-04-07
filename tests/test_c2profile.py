@@ -274,3 +274,25 @@ def test_c2profile_dns_beacon(dns_beacon_file):
 
     assert "dns-beacon {" in str(profile)
     assert 'set beacon "smtp.";' in str(profile)
+
+
+def test_c2profile_v47():
+    c2profile_fragment = """
+    process-inject {
+        set bof_allocator "VirtualAlloc";
+        set bof_reuse_memory "true";
+    }
+    """
+    profile = c2profile.C2Profile.from_text(c2profile_fragment)
+    assert profile.properties["process-inject.bof_allocator"] == ["VirtualAlloc"]
+    assert profile.properties["process-inject.bof_reuse_memory"] == ["true"]
+
+
+def test_c2profile_v48():
+    c2profile_fragment = """
+    stage {
+        set syscall_method "direct";
+    }
+    """
+    profile = c2profile.C2Profile.from_text(c2profile_fragment)
+    assert profile.properties["stage.syscall_method"] == ["direct"]
