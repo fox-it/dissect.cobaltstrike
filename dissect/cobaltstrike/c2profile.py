@@ -450,11 +450,11 @@ class C2Profile(ConfigBlock):
                 block_steps = collections.defaultdict(list)
                 for k, v in value:
                     if k in ("_HEADER", "_HOSTHEADER"):
-                        v = v.decode()
+                        v = v.decode("latin-1")
                         header, _, header_val = v.partition(": ")
                         headers.append((header, header_val))
                     elif k == "_PARAMETER":
-                        v = v.decode()
+                        v = v.decode("latin-1")
                         param, _, param_val = v.partition("=")
                         params.append((param, param_val))
                     elif k == "BUILD":
@@ -462,7 +462,7 @@ class C2Profile(ConfigBlock):
                     elif v is True:
                         block_steps[_build].append(k.lower())
                     else:
-                        block_steps[_build].append((k.lower(), v.decode()))
+                        block_steps[_build].append((k.lower(), v.decode("latin-1")))
                 logger.debug(f"block_steps: {block_steps}")
                 if headers:
                     http_get_client._pair("header", headers)
@@ -479,11 +479,11 @@ class C2Profile(ConfigBlock):
                 block_steps = collections.defaultdict(list)
                 for k, v in value:
                     if k in ("_HEADER", "_HOSTHEADER"):
-                        v = v.decode()
+                        v = v.decode("latin-1")
                         header, _, header_val = v.partition(": ")
                         headers.append((header, header_val))
                     elif k == "_PARAMETER":
-                        v = v.decode()
+                        v = v.decode("latin-1")
                         param, _, param_val = v.partition("=")
                         params.append((param, param_val))
                     elif k == "BUILD":

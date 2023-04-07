@@ -136,6 +136,7 @@ stage_options: "string" string ";"                  -> string
     | "set" "name" string ";"                       -> name
     | "set" "rich_header" string ";"                -> rich_header
     | "set" "checksum" string ";"                   -> checksum
+    | "set" "syscall_method" string ";"             -> syscall_method           // introduced in Cobalt Strike 4.8
 
 process_inject_options: "set" "allocator" string ";"    -> allocator
     | "set" "min_alloc" string ";"                      -> min_alloc
@@ -145,6 +146,8 @@ process_inject_options: "set" "allocator" string ";"    -> allocator
     | "transform-x64" "{" stage_transform* "}"          -> transform_x64
     | "execute" "{" execute_options* "}"                -> execute
     | "disable" string ";"                              -> disable
+    | "set" "bof_allocator" string ";"                  -> bof_allocator        // introduced in Cobalt Strike 4.7
+    | "set" "bof_reuse_memory" string ";"               -> bof_reuse_memory     // introduced in Cobalt Strike 4.7
 
 execute_options: "CreateThread" string ";"  -> createthread_special
     | "CreateRemoteThread" string ";"       -> createremotethread_special

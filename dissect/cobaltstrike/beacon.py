@@ -43,8 +43,13 @@ enum BeaconSetting: uint16 {
 
     // CobaltStrike version >= 3.4 (27 Jul, 2016)
     SETTING_PIPENAME = 15,
-    SETTING_KILLDATE_YEAR = 16,
-    SETTING_KILLDATE_MONTH = 17,
+
+    SETTING_KILLDATE_YEAR = 16,         // Deprecated since Cobalt Strike 4.7
+    SETTING_BOF_ALLOCATOR = 16,         // Introduced in Cobalt Strike 4.7
+
+    SETTING_KILLDATE_MONTH = 17,        // Deprecated since Cobalt Strike 4.8
+    SETTING_SYSCALL_METHOD = 17,        // Introduced in Cobalt Strike 4.8
+
     SETTING_KILLDATE_DAY = 18,
     SETTING_DNS_IDLE = 19,
     SETTING_DNS_SLEEP = 20,
@@ -94,7 +99,9 @@ enum BeaconSetting: uint16 {
     SETTING_PROCINJ_MINALLOC = 45,
     SETTING_PROCINJ_TRANSFORM_X86 = 46,
     SETTING_PROCINJ_TRANSFORM_X64 = 47,
-    SETTING_PROCINJ_ALLOWED = 48,
+
+    SETTING_PROCINJ_ALLOWED = 48,           // Deprecated since Cobalt Strike 4.7
+    SETTING_PROCINJ_BOF_REUSE_MEM = 48,     // Introduced in Cobalt Strike 4.7
 
     // CobaltStrike version >= 3.13 (Jan 2, 2019)
     SETTING_BINDHOST = 49,
