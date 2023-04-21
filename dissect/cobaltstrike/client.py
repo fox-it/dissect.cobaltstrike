@@ -294,11 +294,8 @@ class HttpBeaconClient:
         self.user_agent: str = self.bconfig.settings["SETTING_USERAGENT"] if user_agent is None else user_agent
         self.host_header: str = self.bconfig.settings["SETTING_HOST_HEADER"] if host_header is None else host_header
         self.writer = RecordWriter() if writer is not None else writer
-        _ , _ , fqdn = self.host_header.encode().partition(b": ")
-        if fqdn :
-            self.host_header = fqdn.decode().strip()
-        else:
-            self.host_header = self.domain
+        _, _, fqdn = self.host_header.encode().partition(b": ")
+        self.host_header = fqdn.decode().strip() if fqdn else self.domain
 
         self.print_settings()
         if dry_run:
