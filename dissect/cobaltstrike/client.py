@@ -298,7 +298,7 @@ class HttpBeaconClient:
         if fqdn :
             self.host_header = fqdn.decode().strip()
         else:
-            self.host_header = self.domai
+            self.host_header = self.domain
 
         self.print_settings()
         if dry_run:
