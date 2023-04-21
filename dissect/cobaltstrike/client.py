@@ -190,6 +190,7 @@ class HttpBeaconClient:
         sleeptime=None,
         jitter=None,
         user_agent=None,
+        host_header=None,
         verbose=None,
         silent=None,
         writer=None,
@@ -291,7 +292,10 @@ class HttpBeaconClient:
         self.sleeptime: int = self.bconfig.settings["SETTING_SLEEPTIME"] if sleeptime is None else sleeptime
         self.jitter: int = self.bconfig.settings["SETTING_JITTER"] if jitter is None else jitter
         self.user_agent: str = self.bconfig.settings["SETTING_USERAGENT"] if user_agent is None else user_agent
+        self.host_header: str = self.bconfig.settings["SETTING_HOST_HEADER"] if host_header is None else host_header
         self.writer = RecordWriter() if writer is not None else writer
+        _, _, fqdn = self.host_header.encode().partition(b": ")
+        self.host_header = fqdn.decode().strip() if fqdn else self.domain
 
         self.print_settings()
         if dry_run:
@@ -320,7 +324,7 @@ class HttpBeaconClient:
         return HttpRequest(
             method=self.get_verb,
             uri=self.get_uri.encode(),
-            headers={b"User-Agent": self.user_agent.encode()},
+            headers={b"User-Agent": self.user_agent.encode(), b"Host": self.host_header.encode()},
             params={},
             body=b"",
         )
@@ -330,7 +334,7 @@ class HttpBeaconClient:
         return HttpRequest(
             method=self.submit_verb,
             uri=self.submit_uri.encode(),
-            headers={b"User-Agent": self.user_agent.encode()},
+            headers={b"User-Agent": self.user_agent.encode(), b"Host": self.host_header.encode()},
             params={},
             body=b"",
         )
@@ -363,6 +367,7 @@ class HttpBeaconClient:
         url = urllib.parse.urljoin(self.base_url, req.uri.decode())
         params = {k.decode(): v.decode() for k, v in req.params.items()}
         try:
+            self.logger.debug("requesting : %r", req)
             response = httpx.request(
                 req.method, url, headers=req.headers, params=params, content=req.body, verify=self.verify
             )

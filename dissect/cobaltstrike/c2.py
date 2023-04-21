@@ -298,7 +298,7 @@ class HttpDataTransform:
                 headers[key] = val
             elif step == "uri_append":
                 uri += data
-            elif step == "parameter":
+            elif step == "parameter" or step == "_parameter":
                 assert isinstance(step_val, bytes)
                 params[step_val] = data
             elif step == "build":
