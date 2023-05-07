@@ -331,7 +331,7 @@ def iter_beacon_config_blocks(
         bytes_counter = collections.Counter()
         for chunk in iter(functools.partial(fxor.read, io.DEFAULT_BUFFER_SIZE), b""):
             fourgrams = grouper(chunk, n=4, fillvalue=0)
-            bytes_counter.update(gram[0] for gram in fourgrams if gram[0] == gram[1] == gram [2] == gram[3])
+            bytes_counter.update(gram[0] for gram in fourgrams if gram[0] == gram[1] == gram[2] == gram[3])
         most_common_bytes = [p8(x[0]) for x in bytes_counter.most_common()]
 
         # Sort left xor keys by most common bytes first
