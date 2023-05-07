@@ -318,7 +318,7 @@ def iter_beacon_config_blocks(
     # Retry with left over xor keys if specified
     if not found and all_xor_keys:
         logger.debug("config_block not found, trying all xor keys...")
-        if xordecode:            
+        if xordecode:
             try:
                 fxor = XorEncodedFile.from_file(fobj)
             except ValueError:
