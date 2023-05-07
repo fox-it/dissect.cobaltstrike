@@ -1,6 +1,7 @@
 """
 This module is responsible for extracting and parsing configuration from Cobalt Strike beacon payloads.
 """
+import collections
 import os
 import io
 import sys
