@@ -1,6 +1,7 @@
 """
 This module is responsible for extracting and parsing configuration from Cobalt Strike beacon payloads.
 """
+import collections
 import os
 import io
 import sys
@@ -318,7 +319,25 @@ def iter_beacon_config_blocks(
     # Retry with left over xor keys if specified
     if not found and all_xor_keys:
         logger.debug("config_block not found, trying all xor keys...")
+        if xordecode:
+            try:
+                fxor = XorEncodedFile.from_file(fobj)
+            except ValueError:
+                fxor = fobj
+
+        # Determine left over xor keys
         left_xor_keys = make_byte_list(exclude=xor_keys)
+
+        # Determine most common bytes in the (xordecoded) file
+        bytes_counter = collections.Counter()
+        for chunk in iter(functools.partial(fxor.read, io.DEFAULT_BUFFER_SIZE), b""):
+            fourgrams = grouper(chunk, n=4, fillvalue=0)
+            bytes_counter.update(gram[0] for gram in fourgrams if gram[0] == gram[1] == gram[2] == gram[3])
+        most_common_bytes = [p8(x[0]) for x in bytes_counter.most_common()]
+
+        # Sort left xor keys by most common bytes first
+        left_xor_keys.sort(key=lambda x: most_common_bytes.index(x) if x in most_common_bytes else 256)
+
         logger.debug(f"left xor keys to try: {left_xor_keys}")
         yield from iter_beacon_config_blocks(fobj, left_xor_keys, xordecode=xordecode, all_xor_keys=False)
 
