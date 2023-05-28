@@ -11,11 +11,16 @@
 # Then run it for real in verbose mode:
 #  $ python3 example_client.py <beacon_file> -v
 #
-from io import BytesIO
 import textwrap
+from io import BytesIO
 
-from dissect.cobaltstrike.client import HttpBeaconClient, BeaconCallback, BeaconCommand, parse_commandline_options
-from dissect.cobaltstrike.client import CallbackOutputMessage
+from dissect.cobaltstrike.client import (
+    BeaconCallback,
+    BeaconCommand,
+    CallbackOutputMessage,
+    HttpBeaconClient,
+    parse_commandline_options,
+)
 from dissect.cobaltstrike.utils import p32be, u32be
 
 client = HttpBeaconClient()

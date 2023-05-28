@@ -1,28 +1,32 @@
 import hmac
 import random
+
 import pytest
+from Crypto.PublicKey import RSA
 
 from dissect.cobaltstrike.beacon import BeaconConfig
 from dissect.cobaltstrike.c2 import (
-    C2Http,
-    HttpRequest,
-    HttpResponse,
-    BeaconMetadata,
-    TaskPacket,
-    BeaconCommand,
     BeaconCallback,
+    BeaconCommand,
+    BeaconKeys,
+    BeaconMetadata,
+    C2Http,
     ClientC2Data,
-    ServerC2Data,
     EncryptedPacket,
     HttpDataTransform,
-    BeaconKeys,
+    HttpRequest,
+    HttpResponse,
+    ServerC2Data,
+    TaskPacket,
+    decrypt_metadata,
+    decrypt_packet,
+    derive_aes_hmac_keys,
+    encrypt_data,
+    encrypt_metadata,
+    encrypt_packet,
+    pad,
     parse_raw_http,
 )
-from dissect.cobaltstrike.c2 import encrypt_metadata, encrypt_data, encrypt_packet
-from dissect.cobaltstrike.c2 import decrypt_metadata, decrypt_packet
-from dissect.cobaltstrike.c2 import derive_aes_hmac_keys, pad
-
-from Crypto.PublicKey import RSA
 
 # Test data sources:
 #  - https://www.malware-traffic-analysis.net/2021/02/02/index.html

@@ -9,10 +9,9 @@ Cobalt Strike version of beacon payloads.
     version estimate.
 """
 
-import re
 import datetime
-
-from typing import Dict, Tuple, Optional, Union
+import re
+from typing import Dict, Optional, Tuple, Union
 
 MAX_ENUM_TO_VERSION: Dict[int, str] = {
     20: "Cobalt Strike 3.4 (Jul 29, 2016)",

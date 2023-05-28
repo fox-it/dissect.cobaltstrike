@@ -1,11 +1,9 @@
-import io
 import hashlib
-
-from dissect.cobaltstrike import pe
-from dissect.cobaltstrike import utils
-from dissect.cobaltstrike import xordecode
+import io
 
 import pytest
+
+from dissect.cobaltstrike import pe, utils, xordecode
 
 
 def test_xordecode(beacon_x86_file):

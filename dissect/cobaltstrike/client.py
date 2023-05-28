@@ -8,21 +8,21 @@ Beacon client that can actively connect to a Cobalt Strike Team Server.
 
 """
 # Python imports
-import sys
-import time
-import random
-import hashlib
-import string
-import urllib.parse
-import reprlib
-import inspect
 import argparse
 import datetime
+import hashlib
+import inspect
 import ipaddress
 import logging
+import random
+import reprlib
+import string
+import sys
+import time
+import urllib.parse
 
 # Typing imports
-from typing import Union, Optional, Tuple, Any, Dict, List, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 # Third party imports
 try:
@@ -39,18 +39,27 @@ except ImportError:
 
 # Local imports
 from dissect.cobaltstrike.c2 import (
+    BeaconCallback,
+    BeaconCommand,
     BeaconConfig,
+    BeaconMetadata,
     C2Data,
-    ClientC2Data,
     C2Http,
+    CallbackPacket,
+    ClientC2Data,
     HttpRequest,
     HttpResponse,
-    BeaconMetadata,
+    TaskPacket,
     c2packet_to_record,
+    encrypt_metadata,
+    encrypt_packet,
 )
-from dissect.cobaltstrike.c2 import TaskPacket, CallbackPacket, BeaconCommand, BeaconCallback
-from dissect.cobaltstrike.c2 import encrypt_metadata, encrypt_packet
-from dissect.cobaltstrike.utils import catch_sigpipe, p32be, p32, enable_reprlib_flow_record
+from dissect.cobaltstrike.utils import (
+    catch_sigpipe,
+    enable_reprlib_flow_record,
+    p32,
+    p32be,
+)
 
 logger = logging.getLogger(__name__)
 reprlib.aRepr.maxstring = 100
@@ -676,8 +685,8 @@ def parse_commandline_options(parser=None, defaults=None) -> Tuple[argparse.Name
 
     # Use rich logging if available
     try:
-        from rich.logging import RichHandler
         from rich.console import Console
+        from rich.logging import RichHandler
 
         logging.basicConfig(
             level=level,

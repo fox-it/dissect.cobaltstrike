@@ -3,15 +3,15 @@ This module is responsible for working with Cobalt Strike C2 traffic.
 """
 # Python imports
 import base64
-import random
-import logging
 import hashlib
 import hmac
 import io
-from urllib.parse import urlparse, parse_qsl
+import logging
+import random
 
 # Typing imports
-from typing import List, Optional, Union, Tuple, NamedTuple, Iterator, Dict, overload
+from typing import Dict, Iterator, List, NamedTuple, Optional, Tuple, Union, overload
+from urllib.parse import parse_qsl, urlparse
 
 # Pycryptodome imports
 try:
@@ -30,14 +30,20 @@ except ImportError:
 
 # Local imports
 from dissect.cobaltstrike.beacon import BeaconConfig
-from dissect.cobaltstrike.utils import xor, p32be, netbios_encode, netbios_decode, namedtuple_reprlib_repr
 from dissect.cobaltstrike.c_c2 import (  # noqa: F401
-    c2struct,
+    BeaconCallback,
+    BeaconCommand,
+    BeaconMetadata,
     CallbackPacket,
     TaskPacket,
-    BeaconMetadata,
-    BeaconCommand,
-    BeaconCallback,
+    c2struct,
+)
+from dissect.cobaltstrike.utils import (
+    namedtuple_reprlib_repr,
+    netbios_decode,
+    netbios_encode,
+    p32be,
+    xor,
 )
 
 TransformStep = Tuple[str, Union[str, bytes, bool, int]]

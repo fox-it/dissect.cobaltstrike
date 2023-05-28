@@ -3,12 +3,11 @@ This module is responsible for dumping payloads from `ArtifactKit`_ generated ex
 
 .. _ArtifactKit: https://www.cobaltstrike.com/blog/what-is-a-stageless-payload-artifact/
 """
-import io
-import sys
-import logging
 import contextlib
-
-from typing import NamedTuple, BinaryIO, Iterator, Optional
+import io
+import logging
+import sys
+from typing import BinaryIO, Iterator, NamedTuple, Optional
 
 from dissect.cobaltstrike import utils
 

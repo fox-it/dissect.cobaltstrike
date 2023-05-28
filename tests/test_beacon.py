@@ -1,12 +1,12 @@
-import io
-import sys
 import hashlib
+import io
 import subprocess
+import sys
 from unittest.mock import patch
 
-from dissect.cobaltstrike import beacon
-
 import pytest
+
+from dissect.cobaltstrike import beacon
 
 
 def test_beacon_from_file(beacon_x64_file):

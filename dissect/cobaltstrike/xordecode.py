@@ -2,15 +2,16 @@
 This module is responsible for decoding XorEncoded Cobalt Strike payloads.
 Not to be confused with the single byte XOR key that is used to obfuscate the beacon configuration block.
 """
-import io
-import os
-import sys
-import logging
 import collections
 import contextlib
+import io
+import logging
+import os
+import sys
 from typing import BinaryIO, Iterator, Union, cast
 
-from dissect.cobaltstrike.utils import catch_sigpipe, iter_find_needle, xor, u32
+from dissect.cobaltstrike.utils import catch_sigpipe, iter_find_needle, u32, xor
+
 from . import pe
 
 logger = logging.getLogger(__name__)
@@ -210,11 +211,11 @@ def main():
     logging.basicConfig(level=level)
 
     from .pe import (
+        find_architecture,
+        find_compile_stamps,
         find_magic_mz,
         find_magic_pe,
-        find_compile_stamps,
         find_stage_prepend_append,
-        find_architecture,
     )
 
     logger.info("Processing file: {!r}".format(args.input))

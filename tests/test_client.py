@@ -1,23 +1,28 @@
 import random
 import time
+from unittest.mock import PropertyMock, patch
 
 import pytest
-from unittest.mock import patch, PropertyMock
+from Crypto.PublicKey import RSA
 from pytest_httpserver import HTTPServer
 from werkzeug.wrappers import Request, Response
-from Crypto.PublicKey import RSA
 
 from dissect.cobaltstrike.beacon import BeaconConfig
+from dissect.cobaltstrike.c2 import (
+    decrypt_metadata,
+    decrypt_packet,
+    encrypt_packet,
+    parse_raw_http,
+)
 from dissect.cobaltstrike.c2profile import C2Profile
-from dissect.cobaltstrike.c2 import decrypt_metadata, encrypt_packet, parse_raw_http, decrypt_packet
 from dissect.cobaltstrike.client import (
-    CallbackDebugMessage,
-    HttpBeaconClient,
-    C2Data,
-    TaskPacket,
-    CallbackPacket,
-    BeaconCommand,
     BeaconCallback,
+    BeaconCommand,
+    C2Data,
+    CallbackDebugMessage,
+    CallbackPacket,
+    HttpBeaconClient,
+    TaskPacket,
     random_computer_name,
 )
 

@@ -1,18 +1,17 @@
 """
 This module contains generic helper functions used by ``dissect.cobaltstrike``.
 """
+import errno
 import io
 import os
-import re
-import sys
-import errno
 import random
-import string
+import re
 import reprlib
+import string
+import sys
 from collections import OrderedDict
-from functools import partial, wraps
 from contextlib import contextmanager
-
+from functools import partial, wraps
 from typing import BinaryIO, Iterator, NamedTuple
 
 
