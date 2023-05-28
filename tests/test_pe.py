@@ -1,6 +1,4 @@
-from dissect.cobaltstrike import pe
-from dissect.cobaltstrike import beacon
-from dissect.cobaltstrike import xordecode
+from dissect.cobaltstrike import beacon, pe, xordecode
 
 
 def test_pe_beacon_x64(beacon_x64_file):

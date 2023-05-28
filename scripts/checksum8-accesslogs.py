@@ -2,11 +2,11 @@
 #
 # Simple script to check the checksum8 of accesslogs
 #
-import re
-import sys
-import datetime
 import argparse
 import collections
+import datetime
+import re
+import sys
 
 from dissect.cobaltstrike import utils
 

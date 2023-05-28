@@ -3,7 +3,7 @@ This module contains helper functions for parsing PE files, mainly for extractin
 """
 import io
 import logging
-from typing import Optional, Tuple, BinaryIO
+from typing import BinaryIO, Optional, Tuple
 
 from dissect import cstruct
 

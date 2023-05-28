@@ -2,26 +2,44 @@
 This module is responsible for extracting and parsing configuration from Cobalt Strike beacon payloads.
 """
 import collections
-import os
-import io
-import sys
-import time
+import functools
 import hashlib
-import logging
+import io
 import ipaddress
 import itertools
-import functools
+import logging
+import os
+import sys
+import time
 from collections import OrderedDict
 from types import MappingProxyType
-from typing import Any, BinaryIO, Dict, Callable, Iterator, List, Mapping, Optional, Tuple, Union, cast
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 from dissect import cstruct
-
 from dissect.cobaltstrike import pe
+from dissect.cobaltstrike.utils import (
+    catch_sigpipe,
+    iter_find_needle,
+    p8,
+    u16be,
+    u32,
+    u32be,
+    xor,
+)
 from dissect.cobaltstrike.version import BeaconVersion
 from dissect.cobaltstrike.xordecode import XorEncodedFile
-from dissect.cobaltstrike.utils import catch_sigpipe, p8, u16be, u32, u32be
-from dissect.cobaltstrike.utils import xor, iter_find_needle
 
 logger = logging.getLogger(__name__)
 
@@ -1018,8 +1036,7 @@ def build_parser():
 @catch_sigpipe
 def main():
     """Entrypoint for beacon-dump."""
-    from . import c2profile
-    from . import utils
+    from . import c2profile, utils
 
     parser = build_parser()
     args = parser.parse_args()

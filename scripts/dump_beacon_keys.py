@@ -6,8 +6,9 @@
 #
 #   $ pip install javaobj-py3
 #
-import javaobj
 import base64
+
+import javaobj
 
 key = javaobj.loads(open(".cobaltstrike.beacon_keys", "rb").read())
 privkey_der = bytes(c & 0xFF for c in key.array.value.privateKey.encoded)

@@ -1,18 +1,29 @@
-import os
-import sys
 import argparse
 import logging
+import os
+import sys
+from typing import Iterator, Optional, Tuple
 
-from typing import Optional, Tuple, Iterator
-
-from dissect.cobaltstrike.beacon import BeaconConfig
-from dissect.cobaltstrike.utils import catch_sigpipe, LRUDict, enable_reprlib_cstruct, enable_reprlib_flow_record
 from dissect.cobaltstrike import utils
-from dissect.cobaltstrike.c2 import C2Http, HttpRequest, HttpResponse, parse_raw_http, C2Packet, enable_reprlib_c2
-from dissect.cobaltstrike.c_c2 import BeaconMetadata, BeaconCommand, BeaconCallback
+from dissect.cobaltstrike.beacon import BeaconConfig
+from dissect.cobaltstrike.c2 import (
+    C2Http,
+    C2Packet,
+    HttpRequest,
+    HttpResponse,
+    enable_reprlib_c2,
+    parse_raw_http,
+)
+from dissect.cobaltstrike.c_c2 import BeaconCallback, BeaconCommand, BeaconMetadata
+from dissect.cobaltstrike.utils import (
+    LRUDict,
+    catch_sigpipe,
+    enable_reprlib_cstruct,
+    enable_reprlib_flow_record,
+)
 
 try:
-    from flow.record import RecordWriter, RecordDescriptor, extend_record, Record
+    from flow.record import Record, RecordDescriptor, RecordWriter, extend_record
 except ImportError:
     raise ImportError(
         "flow.record is required for writing Beacon records, please install it with `pip install flow.record`"
@@ -354,7 +365,7 @@ def main():
     )
 
     with RecordWriter(args.writer) as writer:
-        for (packet, c2packet) in beacon_pcap:
+        for packet, c2packet in beacon_pcap:
             packet_record = packet_to_record(packet)
             record = c2packet_to_record(c2packet)
             record.raw_http = raw_http_from_packet(packet)

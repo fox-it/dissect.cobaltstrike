@@ -1,23 +1,28 @@
 import random
 import time
+from unittest.mock import PropertyMock, patch
 
 import pytest
-from unittest.mock import patch, PropertyMock
+from Crypto.PublicKey import RSA
 from pytest_httpserver import HTTPServer
 from werkzeug.wrappers import Request, Response
-from Crypto.PublicKey import RSA
 
 from dissect.cobaltstrike.beacon import BeaconConfig
+from dissect.cobaltstrike.c2 import (
+    decrypt_metadata,
+    decrypt_packet,
+    encrypt_packet,
+    parse_raw_http,
+)
 from dissect.cobaltstrike.c2profile import C2Profile
-from dissect.cobaltstrike.c2 import decrypt_metadata, encrypt_packet, parse_raw_http, decrypt_packet
 from dissect.cobaltstrike.client import (
-    CallbackDebugMessage,
-    HttpBeaconClient,
-    C2Data,
-    TaskPacket,
-    CallbackPacket,
-    BeaconCommand,
     BeaconCallback,
+    BeaconCommand,
+    C2Data,
+    CallbackDebugMessage,
+    CallbackPacket,
+    HttpBeaconClient,
+    TaskPacket,
     random_computer_name,
 )
 
@@ -116,7 +121,7 @@ def test_client_get_task(request, task_file_list_packet, fixture_name, httpserve
         assert request.method == c2profile.properties["http-get.verb"].pop()
         assert request.path == c2profile.properties["http-get.uri"].pop()
         assert request.headers.get("User-Agent") == c2profile.properties["useragent"].pop()
-        for (header, value) in c2profile.properties.get("http-get.client.header", {}):
+        for header, value in c2profile.properties.get("http-get.client.header", {}):
             assert request.headers.get(header) == value
 
         # recover the GET request from the client
@@ -173,7 +178,7 @@ def test_client_post_callback(request, fixture_name, httpserver: HTTPServer):
         assert request.method == c2profile.properties["http-post.verb"].pop()
         assert request.path == c2profile.properties["http-post.uri"].pop()
         assert request.headers.get("User-Agent") == c2profile.properties["useragent"].pop()
-        for (header, value) in c2profile.properties["http-post.client.header"]:
+        for header, value in c2profile.properties["http-post.client.header"]:
             assert request.headers.get(header) == value
 
         # recover the POST request by the client

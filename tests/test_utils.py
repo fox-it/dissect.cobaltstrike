@@ -1,4 +1,5 @@
 import pytest
+
 from dissect.cobaltstrike import utils
 
 

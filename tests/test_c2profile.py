@@ -1,6 +1,4 @@
-from dissect.cobaltstrike import c2profile
-from dissect.cobaltstrike import beacon
-
+from dissect.cobaltstrike import beacon, c2profile
 
 C2PROFILE_SOURCE = """
 set jitter "100";

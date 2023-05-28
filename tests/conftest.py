@@ -3,9 +3,9 @@ import zipfile
 from contextlib import contextmanager
 from pathlib import Path
 
-from dissect.cobaltstrike import beacon
-
 import pytest
+
+from dissect.cobaltstrike import beacon
 
 beacons = {
     # x86 beacon

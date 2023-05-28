@@ -2,13 +2,13 @@
 This module is responsible for parsing and generating Cobalt Strike Malleable C2 profiles.
 It uses the `lark-parser` library for parsing the syntax using the ``c2profile.lark`` grammar file.
 """
+import collections
+import logging
 import os
 import sys
-import logging
-import collections
 from typing import Any, List, Tuple, Union
 
-from lark import Lark, Tree, Token
+from lark import Lark, Token, Tree
 from lark.reconstruct import Reconstructor
 
 from dissect.cobaltstrike.beacon import BeaconConfig, BeaconSetting
@@ -764,6 +764,7 @@ def main():
     """Entrypoint for c2profile-dump."""
 
     import logging
+
     from dissect.cobaltstrike.beacon import BeaconConfig
 
     parser = build_parser()
