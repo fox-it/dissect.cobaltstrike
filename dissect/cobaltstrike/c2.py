@@ -269,7 +269,7 @@ class HttpDataTransform:
         headers = request.headers
         body = request.body
         data: bytes = b""
-        for (step, step_val) in self.tsteps:
+        for step, step_val in self.tsteps:
             # logger.debug("transform step %r, %r", step, step_val)
             step = step.lower()
             if step == "append":
@@ -340,7 +340,7 @@ class HttpDataTransform:
         build_id = None
         data = b""
         # logger.debug("recover steps: %r", self.rsteps)
-        for (step, step_val) in self.rsteps:
+        for step, step_val in self.rsteps:
             step = step.lower()
             if step == "append":
                 if isinstance(step_val, bytes):

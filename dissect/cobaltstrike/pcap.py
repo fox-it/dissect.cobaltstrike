@@ -365,7 +365,7 @@ def main():
     )
 
     with RecordWriter(args.writer) as writer:
-        for (packet, c2packet) in beacon_pcap:
+        for packet, c2packet in beacon_pcap:
             packet_record = packet_to_record(packet)
             record = c2packet_to_record(c2packet)
             record.raw_http = raw_http_from_packet(packet)

@@ -121,7 +121,7 @@ def test_client_get_task(request, task_file_list_packet, fixture_name, httpserve
         assert request.method == c2profile.properties["http-get.verb"].pop()
         assert request.path == c2profile.properties["http-get.uri"].pop()
         assert request.headers.get("User-Agent") == c2profile.properties["useragent"].pop()
-        for (header, value) in c2profile.properties.get("http-get.client.header", {}):
+        for header, value in c2profile.properties.get("http-get.client.header", {}):
             assert request.headers.get(header) == value
 
         # recover the GET request from the client
@@ -178,7 +178,7 @@ def test_client_post_callback(request, fixture_name, httpserver: HTTPServer):
         assert request.method == c2profile.properties["http-post.verb"].pop()
         assert request.path == c2profile.properties["http-post.uri"].pop()
         assert request.headers.get("User-Agent") == c2profile.properties["useragent"].pop()
-        for (header, value) in c2profile.properties["http-post.client.header"]:
+        for header, value in c2profile.properties["http-post.client.header"]:
             assert request.headers.get(header) == value
 
         # recover the POST request by the client

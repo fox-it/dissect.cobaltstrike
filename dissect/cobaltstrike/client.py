@@ -713,7 +713,6 @@ def parse_commandline_options(parser=None, defaults=None) -> Tuple[argparse.Name
 
 @catch_sigpipe
 def main():
-
     parser = build_parser()
     parser.add_argument(
         "--no-warning",
