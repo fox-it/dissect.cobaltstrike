@@ -16,13 +16,16 @@ from typing import BinaryIO, Iterator, NamedTuple
 
 
 def xor(data: bytes, key: bytes) -> bytes:
-    """XOR data with key"""
+    """XOR data with key (simd version)"""
     if sum(key) == 0:
         return data
-    data = bytearray(data)
-    for i in range(len(data)):
-        data[i] ^= key[i % len(key)]
-    return bytes(data)
+
+    size = len(data)
+    if len(key) < size:
+        key = key * ((size // len(key)) + 1)
+    key = key[:size]
+
+    return int.to_bytes(int.from_bytes(data, "little") ^ int.from_bytes(key, "little"), size, "little")
 
 
 def netbios_encode(data: bytes, offset: int = 0x41) -> bytes:
