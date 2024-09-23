@@ -28,18 +28,18 @@ def test_beacon_from_file(beacon_x64_file):
 
 
 def test_beacon_from_path(beacon_x86_file, tmp_path):
-    with tmp_path / "beacon_x86.bin" as p:
-        p.write_bytes(beacon_x86_file.read())
-        bconfig = beacon.BeaconConfig.from_path(p)
-        assert len(bconfig.domains)
-        assert len(bconfig.uris)
-        assert bconfig.xorencoded
-        assert bconfig.protocol == "https"
+    p = tmp_path / "beacon_x86.bin"
+    p.write_bytes(beacon_x86_file.read())
+    bconfig = beacon.BeaconConfig.from_path(p)
+    assert len(bconfig.domains)
+    assert len(bconfig.uris)
+    assert bconfig.xorencoded
+    assert bconfig.protocol == "https"
 
-    with tmp_path / "bacon.bin" as p:
-        p.write_bytes(b"no bacon for you")
-        with pytest.raises(ValueError, match="No valid Beacon configuration found"):
-            beacon.BeaconConfig.from_path(p)
+    p = tmp_path / "bacon.bin"
+    p.write_bytes(b"no bacon for you")
+    with pytest.raises(ValueError, match="No valid Beacon configuration found"):
+        beacon.BeaconConfig.from_path(p)
 
 
 def test_beacon_from_bytes(beacon_x86_file):
