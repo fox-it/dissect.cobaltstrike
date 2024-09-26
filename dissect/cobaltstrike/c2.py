@@ -174,7 +174,7 @@ def enable_reprlib_c2():
 def c2packet_to_record(c2packet: C2Packet) -> Record:
     """Convert `c2packet` to a flow.record."""
     fields = [("bytes", "raw_http")]
-    kv = dict(c2packet._values)
+    kv = c2packet.__dict__
     for field in c2packet._type.fields:
         ftype = str(field.type)
         if ftype.startswith("char"):

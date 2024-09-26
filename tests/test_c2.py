@@ -374,7 +374,7 @@ def test_beaconmetadata_set_membership():
     m2 = BeaconMetadata(magic=0xBEEF, pid=0x12345, info=b"testing")
     m3 = BeaconMetadata(magic=0xBEEF, pid=0x12345, info=b"12345")
     metadata_set.add(m1)
-    assert list(m1._values.items()) == list(m2._values.items())
+    assert list(m1.__dict__.items()) == list(m2.__dict__.items())
     assert hash(m1) == hash(m2)
     assert m1 == m2
     assert m2 in metadata_set

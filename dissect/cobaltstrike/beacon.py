@@ -486,8 +486,8 @@ def parse_transform_binary(program: bytes, build: str = "metadata") -> List[Tupl
         value = u32be(d)
         if len(d) != 4 or value == 0:
             break
-        name = TransformStep.reverse.get(value, "")
-        step = getattr(TransformStep, name, None)
+        step = TransformStep(value)
+        name = step.name
         if step is None:
             raise IndexError("Unknown transform step for value: {}".format(value))
         elif step == TransformStep.BUILD:

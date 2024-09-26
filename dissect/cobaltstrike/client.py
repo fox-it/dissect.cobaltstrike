@@ -7,6 +7,7 @@ Beacon client that can actively connect to a Cobalt Strike Team Server.
    A default client will perform check-ins and only log the tasks it receives unless implemented otherwise.
 
 """
+
 # Python imports
 import argparse
 import datetime
@@ -267,20 +268,20 @@ class HttpBeaconClient:
 
         ver_major, ver_minor, ver_build = random_windows_ver()
 
-        self.metadata = BeaconMetadata(
-            magic=0xBEEF,
-            ansi_cp=ansi_cp,
-            oem_cp=oem_cp,
-            bid=self.beacon_id,
-            pid=self.pid,
-            flag=flag,
-            aes_rand=self.aes_rand,
-            ip=internal_ip_int,
-            ver_major=ver_major,
-            ver_minor=ver_minor,
-            ver_build=ver_build,
-            info=info.encode(),
-        )
+        self.metadata = BeaconMetadata()
+        self.metadata.magic = 0xBEEF
+        self.metadata.ansi_cp = ansi_cp
+        self.metadata.oem_cp = oem_cp
+        self.metadata.bid = self.beacon_id
+        self.metadata.pid = self.pid
+        self.metadata.flag = flag
+        self.metadata.aes_rand = self.aes_rand
+        self.metadata.ip = internal_ip_int
+        self.metadata.ver_major = ver_major
+        self.metadata.ver_minor = ver_minor
+        self.metadata.ver_build = ver_build
+        self.metadata.info = info.encode()
+
         self.c2http = C2Http(bconfig, aes_key=self.aes_key, hmac_key=self.hmac_key)
 
         self.domain = domain or random.choice(self.bconfig.domains)
