@@ -11,7 +11,7 @@ color = true
 
 [tool.ruff]
 line-length = 120
-select = [
+lint.select = [
     "F",    # Pyflakes
     "E",    # pycodestyle
     "W",    # pycodestyle

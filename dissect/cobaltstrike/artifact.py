@@ -3,6 +3,9 @@ This module is responsible for dumping payloads from `ArtifactKit`_ generated ex
 
 .. _ArtifactKit: https://www.cobaltstrike.com/blog/what-is-a-stageless-payload-artifact/
 """
+
+from __future__ import annotations
+
 import contextlib
 import io
 import logging

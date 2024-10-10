@@ -1,6 +1,9 @@
 """
 This module contains helper functions for parsing PE files, mainly for extracting Beacon specific PE artifacts.
 """
+
+from __future__ import annotations
+
 import io
 import logging
 from typing import BinaryIO, Optional, Tuple

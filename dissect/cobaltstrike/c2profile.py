@@ -2,10 +2,17 @@
 This module is responsible for parsing and generating Cobalt Strike Malleable C2 profiles.
 It uses the `lark-parser` library for parsing the syntax using the ``c2profile.lark`` grammar file.
 """
+
+from __future__ import annotations
+
 import collections
 import logging
-import os
 import sys
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from os import PathLike
+
 from typing import Any, List, Tuple, Union
 
 from lark import Lark, Token, Tree
@@ -370,7 +377,7 @@ class C2Profile(ConfigBlock):
         )
 
     @classmethod
-    def from_path(cls, path: Union[str, os.PathLike]) -> "C2Profile":
+    def from_path(cls, path: Union[str, PathLike]) -> "C2Profile":
         """Construct a :class:`C2Profile` from given path (path to a malleable C2 profile)"""
         with open(path, "r") as f:
             return cls.from_text(f.read())

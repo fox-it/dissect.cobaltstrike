@@ -1,6 +1,9 @@
 """
 This module is responsible for extracting and parsing configuration from Cobalt Strike beacon payloads.
 """
+
+from __future__ import annotations
+
 import collections
 import functools
 import hashlib
@@ -8,11 +11,15 @@ import io
 import ipaddress
 import itertools
 import logging
-import os
 import sys
 import time
 from collections import OrderedDict
 from types import MappingProxyType
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from os import PathLike
+
 from typing import (
     Any,
     BinaryIO,
@@ -453,7 +460,6 @@ def parse_recover_binary(program: bytes) -> List[Tuple[str, Union[int, bool]]]:
             break
         else:
             logger.error("Unknown recover step {}".format(step))
-            pass
     return rsteps
 
 
@@ -628,7 +634,7 @@ SETTING_TO_PRETTYFUNC: Dict[BeaconSetting, Callable] = {
     BeaconSetting.SETTING_DNSRESOLVER: null_terminated_str,
     BeaconSetting.SETTING_DNS_IDLE: lambda x: str(ipaddress.IPv4Address(x)),
     BeaconSetting.SETTING_WATERMARKHASH: lambda x: null_terminated_bytes(x) if isinstance(x, bytes) else x,
-    BeaconSetting.SETTING_MASKED_WATERMARK: lambda x: x.hex()
+    BeaconSetting.SETTING_MASKED_WATERMARK: lambda x: x.hex(),
     # BeaconSetting.SETTING_PROTOCOL: lambda x: BeaconProtocol(x).name,
     # BeaconSetting.SETTING_CRYPTO_SCHEME: lambda x: CryptoScheme(x).name,
     # BeaconSetting.SETTING_PROXY_BEHAVIOR: lambda x: ProxyServer(x).name,
@@ -709,7 +715,7 @@ class BeaconConfig:
     @classmethod
     def from_path(
         cls,
-        path: Union[str, os.PathLike],
+        path: Union[str, PathLike],
         xor_keys: List[bytes] = None,
         all_xor_keys: bool = False,
     ) -> "BeaconConfig":

@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import argparse
 import logging
 import os
 import sys
-from typing import Iterator, Optional, Tuple
+from typing import TYPE_CHECKING, Iterator, Optional, Tuple
 
 from dissect.cobaltstrike import utils
 from dissect.cobaltstrike.beacon import BeaconConfig
@@ -31,7 +33,9 @@ except ImportError:
 
 try:
     from pyshark import FileCapture
-    from pyshark.packet.packet import Packet
+
+    if TYPE_CHECKING:
+        from pyshark.packet.packet import Packet
 except ImportError:
     raise ImportError("pyshark is required for PCAP parsing, please install it with `pip install pyshark`")
 
