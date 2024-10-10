@@ -1,3 +1,0 @@
-# Exclude some dirs from the release package
-prune tests/beacons
-prune tests/profiles
