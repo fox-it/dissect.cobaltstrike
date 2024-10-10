@@ -23,7 +23,7 @@ Or install using the ``full`` extra to automatically install dependencies for C2
 
    $ pip install dissect.cobaltstrike[full]
 
-**dissect.cobaltstrike** requires Python 3.7 or later.
+**dissect.cobaltstrike** requires Python 3.9 or later.
 
 Documentation
 -------------

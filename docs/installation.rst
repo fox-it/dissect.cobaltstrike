@@ -7,7 +7,7 @@ The easiest way to install ``dissect.cobaltstrike`` is to use **pip**:
 
     $ pip install dissect.cobaltstrike
 
-Python 3.7 or higher is required and it has the following dependencies:
+Python 3.9 or higher is required and it has the following dependencies:
 
 * dissect.cstruct_ - for structure parsing
 * lark_ - for parsing malleable c2 profiles
