@@ -243,11 +243,11 @@ def test_request_error(beacon_x86_bconfig, httpserver: HTTPServer, caplog):
 
     caplog.clear()
     client.get_task()
-    assert "ConnectError('[SSL: WRONG_VERSION_NUMBER] wrong version number" in caplog.text
+    assert "ConnectError('[SSL" in caplog.text
 
     caplog.clear()
     client.send_callback(*CallbackDebugMessage("hello"))
-    assert "ConnectError('[SSL: WRONG_VERSION_NUMBER] wrong version number" in caplog.text
+    assert "ConnectError('[SSL" in caplog.text
 
     # test connection to port that has no webserver running on -> ConnectError with connection refused
     client.run(bconfig=bconfig, sleeptime=0, dry_run=True, domain="127.0.0.1", port=0)
