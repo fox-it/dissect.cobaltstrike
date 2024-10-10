@@ -2,13 +2,19 @@
 This module is responsible for decoding XorEncoded Cobalt Strike payloads.
 Not to be confused with the single byte XOR key that is used to obfuscate the beacon configuration block.
 """
+
+from __future__ import annotations
+
 import collections
 import contextlib
 import io
 import logging
-import os
 import sys
-from typing import BinaryIO, Iterator, Union, cast
+from typing import TYPE_CHECKING, BinaryIO, cast
+
+if TYPE_CHECKING:
+    from os import PathLike
+    from typing import Iterator, Union
 
 from dissect.cobaltstrike.utils import catch_sigpipe, iter_find_needle, u32, xor
 
@@ -118,7 +124,7 @@ class XorEncodedFile(io.RawIOBase):
         raise ValueError(f"MZ header not found for: {fh}")
 
     @classmethod
-    def from_path(cls, path: Union[str, os.PathLike], maxrange: int = 1024) -> "XorEncodedFile":
+    def from_path(cls, path: Union[str, PathLike], maxrange: int = 1024) -> "XorEncodedFile":
         """Constructs a :class:`XorEncodedFile` from path `path`.
 
         This is more of a convenience method as it calls :meth:`XorEncodedFile.from_file` under the hood.

@@ -1,7 +1,10 @@
 """
 This module is responsible for working with Cobalt Strike C2 traffic.
 """
+
 # Python imports
+from __future__ import annotations
+
 import base64
 import hashlib
 import hmac
@@ -29,7 +32,7 @@ except ImportError:
     raise ImportError("flow.record is required for logging C2 packet records, install with `pip install flow.record`")
 
 # Local imports
-from dissect.cobaltstrike.beacon import BeaconConfig
+from dissect.cobaltstrike.beacon import BeaconConfig  # noqa: TCH001
 from dissect.cobaltstrike.c_c2 import (  # noqa: F401
     BeaconCallback,
     BeaconCommand,
@@ -319,12 +322,10 @@ class HttpDataTransform:
         return request._replace(body=body, params=params, uri=uri, headers=headers)
 
     @overload
-    def recover(self, http: HttpRequest) -> ClientC2Data:
-        ...
+    def recover(self, http: HttpRequest) -> ClientC2Data: ...
 
     @overload
-    def recover(self, http: HttpResponse) -> ServerC2Data:
-        ...
+    def recover(self, http: HttpResponse) -> ServerC2Data: ...
 
     def recover(self, http: Union[HttpRequest, HttpResponse]) -> Union[ClientC2Data, ServerC2Data]:
         """Recovers the transformed data in `http` object and returns a C2Data namedtuple.

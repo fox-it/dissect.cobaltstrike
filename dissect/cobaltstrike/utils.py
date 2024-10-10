@@ -1,6 +1,7 @@
 """
 This module contains generic helper functions used by ``dissect.cobaltstrike``.
 """
+
 import errno
 import io
 import os

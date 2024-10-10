@@ -9,6 +9,8 @@ Cobalt Strike version of beacon payloads.
     version estimate.
 """
 
+from __future__ import annotations
+
 import datetime
 import re
 from typing import Dict, Optional, Tuple, Union

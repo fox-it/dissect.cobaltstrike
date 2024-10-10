@@ -9,6 +9,8 @@ Beacon client that can actively connect to a Cobalt Strike Team Server.
 """
 
 # Python imports
+from __future__ import annotations
+
 import argparse
 import datetime
 import hashlib
@@ -227,7 +229,7 @@ class HttpBeaconClient:
 
         # The Beacon Session keys (AES and HMAC) are derived from `aes_rand` bytes.
         #   Beacon Session keys are persistent on the Team Server, so to make check-in and responses repeatable for the
-        #   same `beacon_id` we use a deterministic `aes_rand`` here so we can re-use the same keys.
+        #   same `beacon_id` we use a deterministic `aes_rand`` here so we can reuse the same keys.
         random.seed(self.beacon_id ^ 0xACCE55ED)
         self.aes_rand = random.getrandbits(128).to_bytes(16, "big")
 

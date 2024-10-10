@@ -2,6 +2,7 @@
 Structure definitions and classes for dealing with Cobalt Strike C2 packets.
 Mainly used by :mod:`dissect.cobaltstrike.c2`.
 """
+
 from enum import IntEnum
 
 from dissect import cstruct
