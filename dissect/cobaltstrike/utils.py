@@ -242,7 +242,7 @@ def enable_reprlib_cstruct():
     from dissect.cstruct.types.instance import Instance
 
     def reprlib_repr(self) -> str:
-        values = ", ".join(f"{k}={hex(v) if isinstance(v, int) else reprlib.repr(v)}" for k, v in self._values.items())
+        values = ", ".join(f"{k}={hex(v) if isinstance(v, int) else reprlib.repr(v)}" for k, v in self.__dict__.items())
         return f"<{self._type.name} {values}>"
 
     Instance.__repr__ = reprlib_repr

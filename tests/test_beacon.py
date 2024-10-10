@@ -212,7 +212,7 @@ def test_beacon_settings_readonly(beacon_x64_file):
             "beacon_x86_file",
             ["-t", "raw"],
             0,
-            b"<Setting index=<BeaconSetting.SETTING_WATERMARK: 37>, type=<SettingsType.TYPE_INT: 2>",
+            b"<Setting index=<BeaconSetting.SETTING_WATERMARK: 37> type=<SettingsType.TYPE_INT: 2>",
             None,
             id="beacon_x86_file-stdin-raw",
         ),
