@@ -1,9 +1,99 @@
 [build-system]
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
-build-backend = 'setuptools.build_meta'
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
-write_to = "dissect/cobaltstrike/_version.py"
+[project]
+name = "dissect.cobaltstrike"
+dynamic = ["version"]
+description = "a Python library for dissecting Cobalt Strike related data"
+requires-python = ">=3.9"
+license = {text = "MIT License"}
+readme = "README.rst"
+authors = [
+    {name = "Yun Zheng Hu", email = "hu@fox-it.com"},
+]
+dependencies = [
+    "dissect.cstruct >= 4.2",
+    "lark",
+]
+keywords = ["dissect", "cobaltstrike", "beacon", "parser", "parsing", "lark", "cstruct"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Utilities",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+documentation = "https://dissect-cobaltstrike.readthedocs.io/"
+repository = "https://github.com/fox-it/dissect.cobaltstrike"
+
+[project.optional-dependencies]
+c2 = [
+    "flow.record",
+    "pycryptodome",
+    "httpx",
+]
+pcap = [
+    "pyshark",
+    "dissect.cobaltstrike[c2]",
+]
+full = [
+    "dissect.cobaltstrike[c2,pcap]",
+    "rich",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-httpserver",
+    "dissect.cobaltstrike[full]",
+]
+docs = [
+    "sphinx",
+    "sphinx_rtd_theme>=2.0",
+    "sphinx-autoapi",
+    "sphinx-copybutton",
+    "sphinx-argparse-cli",
+    "ipython",
+    "pickleshare",
+    "dissect.cobaltstrike[full]",
+]
+
+[project.scripts]
+beacon-artifact = "dissect.cobaltstrike.artifact:main"
+beacon-dump = "dissect.cobaltstrike.beacon:main"
+beacon-xordecode = "dissect.cobaltstrike.xordecode:main"
+beacon-pcap = "dissect.cobaltstrike.pcap:main"
+beacon-client = "dissect.cobaltstrike.client:main"
+c2profile-dump = "dissect.cobaltstrike.c2profile:main"
+
+[tool.hatch]
+version.source = "vcs"
+build.hooks.vcs.version-file = "dissect/cobaltstrike/_version.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/tests/beacons/",
+  "/tests/profiles/",
+]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["dissect/cobaltstrike", "tests", "docs"]
 
 [tool.black]
 line-length = 120
