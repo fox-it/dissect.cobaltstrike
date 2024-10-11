@@ -40,8 +40,9 @@ classifiers = [
 ]
 
 [project.urls]
-documentation = "https://dissect-cobaltstrike.readthedocs.io/"
-repository = "https://github.com/fox-it/dissect.cobaltstrike"
+Homepage = "https://github.com/fox-it/dissect.cobaltstrike"
+Documentation = "https://dissect-cobaltstrike.readthedocs.io/"
+Source = "https://github.com/fox-it/dissect.cobaltstrike"
 
 [project.optional-dependencies]
 c2 = [
@@ -84,6 +85,7 @@ c2profile-dump = "dissect.cobaltstrike.c2profile:main"
 
 [tool.hatch]
 version.source = "vcs"
+version.raw-options.local_scheme = "no-local-version"
 build.hooks.vcs.version-file = "dissect/cobaltstrike/_version.py"
 
 [tool.hatch.build.targets.sdist]
