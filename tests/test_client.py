@@ -254,8 +254,10 @@ def test_request_error(beacon_x86_bconfig, httpserver: HTTPServer, caplog):
 
     caplog.clear()
     client.get_task()
-    assert "Connection refused" in caplog.text
+    errors = ["Connection refused", "WinError 10061", "Errno 10061"]
+    assert any(error in caplog.text for error in errors)
 
     caplog.clear()
     client.send_callback(*CallbackDebugMessage("hello"))
-    assert "Connection refused" in caplog.text
+    errors = ["Connection refused", "WinError 10061", "Errno 10061"]
+    assert any(error in caplog.text for error in errors)
