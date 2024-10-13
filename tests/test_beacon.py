@@ -311,3 +311,15 @@ def test_beacon_domains_punycode(punycode_beacon_file):
     assert bconfig.domains == ["kçi.com"]
     assert bconfig.domains[0].encode("idna") == b"xn--ki-4ia.com"
     assert b"k\xe7i.com" in bconfig.raw_settings["SETTING_DOMAINS"]
+
+
+def test_beacon_setting_unknown_enum():
+    setting = (
+        beacon.cs_struct.uint16(6969).dumps(),
+        beacon.SettingsType.TYPE_PTR.dumps(),
+        beacon.cs_struct.uint16(3).dumps(),
+        b"foo",
+    )
+    config = beacon.BeaconConfig(b"".join(setting))
+    assert None not in config.settings
+    assert dict(config.settings) == {"BeaconSetting.6969": b"foo"}
