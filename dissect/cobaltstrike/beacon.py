@@ -170,6 +170,12 @@ enum BeaconSetting: uint16 {
 
     // CobaltStrike version >= 4.7 (Aug 17, 2022)
     SETTING_MASKED_WATERMARK = 74,
+
+    // CobaltStrike version >= 4.9 (Sep 19, 2023)
+    SETTING_DATA_STORE_SIZE = 76,
+
+    // CobaltStrike version >= 4.10 (Jul 16, 2024)
+    SETTING_BEACON_GATE = 78,
 };
 
 enum DeprecatedBeaconSetting: uint16 {
@@ -253,6 +259,33 @@ enum BofAllocator: uint16 {
     MapViewOfFile = 1,
     HeapAlloc = 2,
 };
+
+// https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/beacon-gate.htm
+struct BeaconGateOptions {
+    uint8 InternetOpenA;        // commms
+    uint8 InternetConnectA;
+    uint8 VirtualAlloc;         // core
+    uint8 VirtualAllocEx;
+    uint8 VirtualProtect;
+    uint8 VirtualProtectEx;
+    uint8 VirtualFree;
+    uint8 GetThreadContext;
+    uint8 SetThreadContext;
+    uint8 ResumeThread;
+    uint8 CreateThread;
+    uint8 CreateRemoteThread;
+    uint8 OpenProcess;
+    uint8 OpenThread;
+    uint8 CloseHandle;
+    uint8 CreateFileMappingA;
+    uint8 MapViewOfFile;
+    uint8 UnmapViewOfFile;
+    uint8 VirtualQuery;
+    uint8 DuplicateHandle;
+    uint8 ReadProcessMemory;
+    uint8 WriteProcessMemory;
+    uint8 ExitThread;           // cleanup
+};
 """
 
 cs_struct = cstruct.cstruct(endian=">")
@@ -269,6 +302,7 @@ ProxyServer = cs_struct.ProxyServer
 InjectAllocator = cs_struct.InjectAllocator
 InjectExecutor = cs_struct.InjectExecutor
 BofAllocator = cs_struct.BofAllocator
+BeaconGateOptions = cs_struct.BeaconGateOptions
 
 DEFAULT_XOR_KEYS: List[bytes] = [b"\x69", b"\x2e", b"\x00"]
 """ Default XOR keys used by Cobalt Strike for obfuscating Beacon config bytes """
@@ -581,6 +615,61 @@ def parse_pivot_frame(data: bytes) -> bytes:
     return p.read(length - 4)
 
 
+def parse_beacon_gate(data: bytes) -> BeaconGateOptions:
+    """Parse ``SETTING_BEACON_GATE`` (`.stage.beacon_gate`) data"""
+    return BeaconGateOptions(data)
+
+
+def beacon_gate_options_string(bgo: BeaconGateOptions) -> list[str]:
+    """Return the enabled BeaconGate WinAPI's as a list of strings"""
+    options = {k for k, v in bgo._values.items() if v}
+
+    comms = {"InternetOpenA", "InternetConnectA"}
+    core = {
+        "VirtualAlloc",
+        "VirtualAllocEx",
+        "VirtualProtect",
+        "VirtualProtectEx",
+        "VirtualFree",
+        "GetThreadContext",
+        "SetThreadContext",
+        "ResumeThread",
+        "CreateThread",
+        "CreateRemoteThread",
+        "OpenProcess",
+        "OpenThread",
+        "CloseHandle",
+        "CreateFileMappingA",
+        "MapViewOfFile",
+        "UnmapViewOfFile",
+        "VirtualQuery",
+        "DuplicateHandle",
+        "ReadProcessMemory",
+        "WriteProcessMemory",
+    }
+    cleanup = {"ExitThread"}
+
+    ret = []
+    if options.issuperset(comms | core | cleanup):
+        ret.append("All")
+        options -= comms | core | cleanup
+
+    if options.issuperset(comms):
+        ret.append("Comms")
+        options -= comms
+
+    if options.issuperset(core):
+        ret.append("Core")
+        options -= core
+
+    if options.issuperset(cleanup):
+        ret.append("Cleanup")
+        options -= cleanup
+
+    ret.extend(options)
+    return ret
+
+
 def sha256sum_pubkey(der_data: bytes) -> str:
     """Return the SHA-256 digest of `der_data`"""
     return hashlib.sha256(der_data.rstrip(b"\x00")).hexdigest()
@@ -643,6 +732,7 @@ SETTING_TO_PRETTYFUNC: Dict[BeaconSetting, Callable] = {
     BeaconSetting.SETTING_WATERMARKHASH: lambda x: null_terminated_bytes(x) if isinstance(x, bytes) else x,
     BeaconSetting.SETTING_MASKED_WATERMARK: lambda x: x.hex(),
     BeaconSetting.SETTING_BOF_ALLOCATOR: lambda x: BofAllocator(x).name,
+    BeaconSetting.SETTING_BEACON_GATE: lambda x: beacon_gate_options_string(parse_beacon_gate(x)),
     # BeaconSetting.SETTING_PROTOCOL: lambda x: BeaconProtocol(x).name,
     # BeaconSetting.SETTING_CRYPTO_SCHEME: lambda x: CryptoScheme(x).name,
     # BeaconSetting.SETTING_PROXY_BEHAVIOR: lambda x: ProxyServer(x).name,
