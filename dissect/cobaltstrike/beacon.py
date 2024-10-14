@@ -794,7 +794,7 @@ class BeaconConfig:
         for setting in self.settings_tuple:
             val = setting.value
             if index_type == "name":
-                key = setting.index.name or str(setting.index)
+                key = setting.index.name or str(setting.index).replace(".", "_")
             elif index_type == "const":
                 key = setting.index.value
             else:
