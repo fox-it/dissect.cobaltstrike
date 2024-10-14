@@ -18,7 +18,7 @@ To ensure you have all the dependencies for ``beacon-pcap`` you can use the foll
 
 .. code-block:: bash
 
-   $ pip install -e dissect.cobaltstrike[pcap]
+   $ pip install -e 'dissect.cobaltstrike[pcap]'
 
 Example usage for if you have the RSA private key:
 

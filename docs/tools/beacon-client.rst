@@ -25,7 +25,7 @@ To ensure you have all the dependencies for ``beacon-client`` you can use the fo
 
 .. code-block:: bash
 
-   $ pip install -e dissect.cobaltstrike[c2]
+   $ pip install -e 'dissect.cobaltstrike[c2]'
 
 Here is an example usage of connecting to a Team Server with custom Beacon metadata, we choose a fixed beacon id so we
 can connect to it again later without creating a new beacon session at the Team Server:
