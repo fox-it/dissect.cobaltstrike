@@ -137,6 +137,8 @@ stage_options: "string" string ";"                  -> string
     | "set" "rich_header" string ";"                -> rich_header
     | "set" "checksum" string ";"                   -> checksum
     | "set" "syscall_method" string ";"             -> syscall_method           // introduced in Cobalt Strike 4.8
+    | "set" "data_store_size" string ";"            -> data_store_size          // introduced in Cobalt Strike 4.9
+    | "beacon_gate" "{" beacon_gate_options* "}"    -> beacon_gate              // introduced in Cobalt Strike 4.10
 
 process_inject_options: "set" "allocator" string ";"    -> allocator
     | "set" "min_alloc" string ";"                      -> min_alloc
@@ -157,6 +159,35 @@ execute_options: "CreateThread" string ";"  -> createthread_special
     | "NtQueueApcThread-s" ";"              -> ntqueueapcthread_s
     | "RtlCreateUserThread" ";"             -> rtlcreateuserthread
     | "SetThreadContext" ";"                -> setthreadcontext
+
+beacon_gate_options: "None" ";"             -> none
+    | "Comms" ";"                           -> comms
+    | "Core" ";"                            -> core
+    | "Cleanup" ";"                         -> cleanup
+    | "All" ";"                             -> all
+    | "InternetOpenA" ";"                   -> internetopena
+    | "InternetConnectA" ";"                -> internetconnecta
+    | "VirtualAlloc" ";"                    -> virtualalloc
+    | "VirtualAllocEx" ";"                  -> virtualallocex
+    | "VirtualProtect" ";"                  -> virtualprotect
+    | "VirtualProtectEx" ";"                -> virtualprotextex
+    | "VirtualFree" ";"                     -> virtualfree
+    | "GetThreadContext" ";"                -> getthreadcontext
+    | "SetThreadContext" ";"                -> setthreadcontext
+    | "ResumeThread" ";"                    -> resumethread
+    | "CreateThread" ";"                    -> createthread
+    | "CreateRemoteThread" ";"              -> createremotethread
+    | "OpenProcess" ";"                     -> openprocess
+    | "OpenThread" ";"                      -> openthread
+    | "CloseHandle" ";"                     -> closehandle
+    | "CreateFileMappingA" ";"              -> createfilemappinga
+    | "MapViewOfFile" ";"                   -> mapviewoffile
+    | "UnmapViewOfFile" ";"                 -> unmapviewoffile
+    | "VirtualQuery" ";"                    -> virtualquery
+    | "DuplicateHandle" ";"                 -> duplicatehandle
+    | "ReadProcessMemory" ";"               -> readprocessmemory
+    | "WriteProcessMemory" ";"              -> writeprocessmemory
+    | "ExitThread" ";"                      -> exitthread
 
 postex_options: "set" "spawnto_x86" string ";"  -> spawnto_x86
     | "set" "spawnto_x64" string ";"            -> spawnto_x64
