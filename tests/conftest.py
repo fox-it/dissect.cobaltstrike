@@ -1,6 +1,5 @@
 import io
 import zipfile
-from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -31,15 +30,14 @@ def generate_beacon_file_fixture(filename):
         beacon_zip_path = testpath / "beacons" / filename
         if not beacon_zip_path.exists():
             pytest.skip(f"Beacon {beacon_zip_path!r} not found")
-        with unzip_beacon_as_fh(beacon_zip_path) as beacon_file:
-            # ZipExtFile.seek() raises io.UnsupportedOperation on Python 3.6
-            try:
-                beacon_file.seek(0)
-                yield beacon_file
-            except io.UnsupportedOperation:
-                # fallback to BytesIO
-                with io.BytesIO(beacon_file.read()) as fh:
-                    yield fh
+
+        # Extract the beacon file from the zip archive
+        with zipfile.ZipFile(beacon_zip_path) as zf:
+            data = zf.read(beacon_zip_path.stem, pwd=b"dissect.cobaltstrike")
+
+        # Return the beacon file as a BytesIO object
+        with io.BytesIO(data) as fh:
+            yield fh
 
     return my_fixture
 
@@ -84,13 +82,6 @@ for name, filename in beacons.items():
     inject_beacon_file_fixture(name, filename)
     inject_beacon_path_fixture(name, filename)
     inject_beacon_bconfig_fixture(name)
-
-
-@contextmanager
-def unzip_beacon_as_fh(zip_file, pwd=b"dissect.cobaltstrike"):
-    """Return file object of beacon from zipfile"""
-    with zipfile.ZipFile(zip_file) as zf:
-        yield zf.open(zip_file.stem, pwd=pwd)
 
 
 @pytest.fixture()
