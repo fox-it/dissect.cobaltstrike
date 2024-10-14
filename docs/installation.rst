@@ -19,13 +19,22 @@ The following pip `extras` flavours are provided as well:
 
 .. code-block:: bash
 
-    $ pip install dissect.cobaltstrike[c2]
-    $ pip install dissect.cobaltstrike[pcap]
-    $ pip install dissect.cobaltstrike[full]
+    $ pip install 'dissect.cobaltstrike[c2]'
+    $ pip install 'dissect.cobaltstrike[pcap]'
+    $ pip install 'dissect.cobaltstrike[full]'
 
 * ``[c2]`` for if you want to communicate with Cobalt Strike Team Servers, eg: :doc:`tools/beacon-client`.
 * ``[pcap]`` for if you want to parse and decrypt PCAPS containing Beacon traffic, eg: :doc:`tools/beacon-pcap`.
 * ``[full]`` provides the above but also installs ``rich`` for prettier console logging.
+
+Install the latest pre-release version
+--------------------------------------
+
+Every change to the main branch is packaged and uploaded to PyPi as a pre-release version, to install the latest pre-release version use the ``--pre`` flag:
+
+.. code-block:: bash
+
+    $ pip install --pre dissect.cobaltstrike
 
 Installing from source
 ----------------------
@@ -36,7 +45,7 @@ If you want to install ``dissect.cobaltstrike`` from source, you can use the fol
 
      $ git clone https://github.com/fox-it/dissect.cobaltstrike.git
      $ cd dissect.cobaltstrike
-     $ pip install --editable .[full]
+     $ pip install --editable '.[full]'
 
 Using a virtual environment is recommended. Using the ``--editable`` flag ensures that any changes you make to the source code directly affects the installed package.
 

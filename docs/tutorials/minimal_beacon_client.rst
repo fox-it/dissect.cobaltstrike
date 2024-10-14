@@ -26,7 +26,7 @@ First we install ``dissect.cobaltstrike`` with the ``[c2]`` extra, as we are goi
 
 .. code-block:: bash
 
-    $ pip install dissect.cobaltstrike[c2]
+    $ pip install 'dissect.cobaltstrike[c2]'
 
 This installs the necessary dependencies such as `PyCryptodome` and `httpx`.
 

@@ -26,7 +26,7 @@ First we ensure that we have ``dissect.cobaltstrike`` installed with PCAP suppor
 
 .. code-block:: bash
 
-   $ pip install dissect.cobaltstrike[pcap]
+   $ pip install 'dissect.cobaltstrike[pcap]'
 
 This also installs the ``pyshark`` Python package but it still requires the ``tshark`` binary from Wireshark_ to work.
 Ensure that you have Wireshark_ installed or install the ``tshark`` binary, for example on Ubuntu or Debian systems you can install it with:
