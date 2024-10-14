@@ -21,7 +21,11 @@ The library is available on `PyPI <https://pypi.org/project/dissect.cobaltstrike
 
 Or install using the ``full`` extra to automatically install dependencies for C2 and PCAP support::
 
-   $ pip install dissect.cobaltstrike[full]
+   $ pip install 'dissect.cobaltstrike[full]'
+
+If you want to install the latest pre-release version, use the ``--pre`` flag::
+
+   $ pip install --pre dissect.cobaltstrike
 
 **dissect.cobaltstrike** requires Python 3.9 or later.
 
