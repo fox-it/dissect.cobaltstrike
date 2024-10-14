@@ -247,6 +247,12 @@ enum InjectExecutor: uint8 {
     CreateRemoteThread_ = 7,
     NtQueueApcThread_s = 8
 };
+
+enum BofAllocator: uint16 {
+    VirtualAlloc = 0,
+    MapViewOfFile = 1,
+    HeapAlloc = 2,
+};
 """
 
 cs_struct = cstruct.cstruct(endian=">")
@@ -262,6 +268,7 @@ CryptoScheme = cs_struct.CryptoScheme
 ProxyServer = cs_struct.ProxyServer
 InjectAllocator = cs_struct.InjectAllocator
 InjectExecutor = cs_struct.InjectExecutor
+BofAllocator = cs_struct.BofAllocator
 
 DEFAULT_XOR_KEYS: List[bytes] = [b"\x69", b"\x2e", b"\x00"]
 """ Default XOR keys used by Cobalt Strike for obfuscating Beacon config bytes """
@@ -635,6 +642,7 @@ SETTING_TO_PRETTYFUNC: Dict[BeaconSetting, Callable] = {
     BeaconSetting.SETTING_DNS_IDLE: lambda x: str(ipaddress.IPv4Address(x)),
     BeaconSetting.SETTING_WATERMARKHASH: lambda x: null_terminated_bytes(x) if isinstance(x, bytes) else x,
     BeaconSetting.SETTING_MASKED_WATERMARK: lambda x: x.hex(),
+    BeaconSetting.SETTING_BOF_ALLOCATOR: lambda x: BofAllocator(x).name,
     # BeaconSetting.SETTING_PROTOCOL: lambda x: BeaconProtocol(x).name,
     # BeaconSetting.SETTING_CRYPTO_SCHEME: lambda x: CryptoScheme(x).name,
     # BeaconSetting.SETTING_PROXY_BEHAVIOR: lambda x: ProxyServer(x).name,

@@ -1,3 +1,5 @@
+import pytest
+
 from dissect.cobaltstrike import beacon, c2profile
 
 C2PROFILE_SOURCE = """
@@ -294,3 +296,45 @@ def test_c2profile_v48():
     """
     profile = c2profile.C2Profile.from_text(c2profile_fragment)
     assert profile.properties["stage.syscall_method"] == ["direct"]
+
+
+@pytest.mark.parametrize(
+    ("allocator_enum", "bof_allocator"),
+    [
+        (beacon.BofAllocator.HeapAlloc, "HeapAlloc"),
+        (beacon.BofAllocator.MapViewOfFile, "MapViewOfFile"),
+        (beacon.BofAllocator.HeapAlloc, "HeapAlloc"),
+    ],
+)
+def test_c2profile_bof_allocator(allocator_enum, bof_allocator):
+    data = beacon.Setting(
+        index=beacon.BeaconSetting.SETTING_BOF_ALLOCATOR,
+        type=beacon.SettingsType.TYPE_SHORT,
+        length=0x2,
+        value=allocator_enum.dumps(),
+    ).dumps()
+    bconfig = beacon.BeaconConfig(data)
+    profile = c2profile.C2Profile.from_beacon_config(bconfig)
+    assert profile.properties["process-inject.bof_allocator"] == [bof_allocator]
+
+
+@pytest.mark.parametrize(
+    ("bof_reuse_memory",),
+    [
+        (True,),
+        (False,),
+    ],
+)
+def test_c2profile_bof_reuse_memory(bof_reuse_memory):
+    data = beacon.Setting(
+        index=beacon.BeaconSetting.SETTING_PROCINJ_BOF_REUSE_MEM,
+        type=beacon.SettingsType.TYPE_SHORT,
+        length=0x2,
+        value=beacon.cs_struct.uint16(bof_reuse_memory).dumps(),
+    ).dumps()
+    bconfig = beacon.BeaconConfig(data)
+    profile = c2profile.C2Profile.from_beacon_config(bconfig)
+    if bof_reuse_memory:
+        assert profile.properties["process-inject.bof_reuse_memory"] == ["true"]
+    else:
+        assert "project.inject.bof_reuse_memory" not in profile.properties
