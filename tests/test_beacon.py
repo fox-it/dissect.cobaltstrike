@@ -314,12 +314,12 @@ def test_beacon_domains_punycode(punycode_beacon_file):
 
 
 def test_beacon_setting_unknown_enum():
-    setting = (
-        beacon.cs_struct.uint16(6969).dumps(),
-        beacon.SettingsType.TYPE_PTR.dumps(),
-        beacon.cs_struct.uint16(3).dumps(),
-        b"foo",
-    )
-    config = beacon.BeaconConfig(b"".join(setting))
+    data = beacon.Setting(
+        index=beacon.BeaconSetting(6969),
+        type=beacon.SettingsType.TYPE_PTR,
+        length=3,
+        value=b"foo",
+    ).dumps()
+    config = beacon.BeaconConfig(data)
     assert None not in config.settings
-    assert dict(config.settings) == {"BeaconSetting.6969": b"foo"}
+    assert dict(config.settings) == {"BeaconSetting_6969": b"foo"}
