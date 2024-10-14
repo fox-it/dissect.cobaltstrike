@@ -618,6 +618,10 @@ class C2Profile(ConfigBlock):
                 dns_beacon.set_option("dns_sleep", value)
             elif setting == BeaconSetting.SETTING_MAXDNS:
                 dns_beacon.set_option("maxdns", value)
+            elif setting == BeaconSetting.SETTING_PROCINJ_BOF_REUSE_MEM and value:
+                proc_inj.set_option("bof_reuse_memory", "true")
+            elif setting == BeaconSetting.SETTING_BOF_ALLOCATOR:
+                proc_inj.set_option("bof_allocator", value)
 
         if c2_recover:
             http_get.set_non_empty_config_block("server", HttpOptionsBlock(output=DataTransformBlock(steps=c2_recover)))
