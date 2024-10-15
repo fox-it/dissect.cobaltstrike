@@ -395,3 +395,25 @@ def test_c2profile_beacon_gate():
     bconfig = beacon.BeaconConfig(data)
     profile = c2profile.C2Profile.from_beacon_config(bconfig)
     assert "stage.beacon_gate" not in profile.properties
+
+
+@pytest.mark.parametrize(
+    ("http_data_required",),
+    [
+        (True,),
+        (False,),
+    ],
+)
+def test_c2profile_http_data_required(http_data_required: bool):
+    data = beacon.Setting(
+        index=beacon.BeaconSetting.SETTING_HTTP_DATA_REQUIRED,
+        type=beacon.SettingsType.TYPE_SHORT,
+        length=0x2,
+        value=beacon.cs_struct.uint16(http_data_required).dumps(),
+    ).dumps()
+    bconfig = beacon.BeaconConfig(data)
+    profile = c2profile.C2Profile.from_beacon_config(bconfig)
+    if not http_data_required:
+        assert "http-beacon.data_required" not in profile.properties
+    else:
+        assert profile.properties["http-beacon.data_required"] == ["true"]

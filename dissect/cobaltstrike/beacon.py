@@ -175,6 +175,7 @@ enum BeaconSetting: uint16 {
     SETTING_DATA_STORE_SIZE = 76,
 
     // CobaltStrike version >= 4.10 (Jul 16, 2024)
+    SETTING_HTTP_DATA_REQUIRED = 77,
     SETTING_BEACON_GATE = 78,
 };
 
