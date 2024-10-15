@@ -309,6 +309,12 @@ class DnsBeaconBlock(ConfigBlock):
     __name__ = "dns_beacon"
 
 
+class HttpBeaconBlock(ConfigBlock):
+    """`.http-beacon` block"""
+
+    __name__ = "http_beacon"
+
+
 class ExecuteOptionsBlock(ConfigBlock):
     """`.process-inject.execute` block"""
 
@@ -446,6 +452,7 @@ class C2Profile(ConfigBlock):
         http_post_client = HttpOptionsBlock()
         proc_inj = ProcessInjectBlock()
         dns_beacon = DnsBeaconBlock()
+        http_beacon = HttpBeaconBlock()
         # http_get_server = HttpOptionsBlock()
 
         for setting, value in config.settings_by_index.items():
@@ -668,6 +675,8 @@ class C2Profile(ConfigBlock):
                 proc_inj.set_option("bof_allocator", value)
             elif setting == BeaconSetting.SETTING_DATA_STORE_SIZE:
                 stage.set_option("data_store_size", value)
+            elif setting == BeaconSetting.SETTING_HTTP_DATA_REQUIRED and value:
+                http_beacon.set_option("data_required", "true")
             elif setting == BeaconSetting.SETTING_BEACON_GATE and value:
                 block = BeaconGateBlock.from_beacon_gate_option_strings(value)
                 stage.set_config_block("beacon_gate", block)
@@ -681,6 +690,7 @@ class C2Profile(ConfigBlock):
         profile.set_non_empty_config_block("stage", stage)
         profile.set_non_empty_config_block("process_inject", proc_inj)
         profile.set_non_empty_config_block("dns_beacon", dns_beacon)
+        profile.set_non_empty_config_block("http_beacon", http_beacon)
         return profile
 
     def __str__(self) -> str:
