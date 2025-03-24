@@ -325,7 +325,7 @@ def test_beacon_setting_unknown_enum():
     assert dict(config.settings) == {"BeaconSetting_6969": b"foo"}
 
 
-def test_beacon_dump_multiple_files(beacon_x86_path, beacon_x64_path, tmp_path):
+def test_beacon_dump_multiple_files(beacon_x86_path, beacon_x64_path):
     proc = subprocess.run(
         [sys.executable, "-m", "dissect.cobaltstrike.beacon", str(beacon_x86_path), str(beacon_x64_path)],
         capture_output=True,
@@ -335,7 +335,7 @@ def test_beacon_dump_multiple_files(beacon_x86_path, beacon_x64_path, tmp_path):
     assert "71fab2149cbdce552f00e6d75372494d3f7755d366fd6849a6d5c9e0f73bc40f" in proc.stdout.decode()
 
 
-def test_beacon_dump_default_xor_keys_only(beacon_custom_xorkey_path, tmp_path):
+def test_beacon_dump_default_xor_keys_only(beacon_custom_xorkey_path):
     # default behavior is to try all xor keys, and we should find a valid beacon
     proc = subprocess.run(
         [
@@ -350,7 +350,7 @@ def test_beacon_dump_default_xor_keys_only(beacon_custom_xorkey_path, tmp_path):
     assert b"SETTING_PUBKEY = '36aff0b273cb7aa704e4219ad3be78defcc8c1d7ecb779d55f438e82c7138673'" in proc.stdout
     proc.check_returncode()
 
-    # When we enable --default-xor-keys-only, we should not find a valid beacon
+    # when we enable --default-xor-keys-only, we should not find a valid beacon
     proc = subprocess.run(
         [
             sys.executable,
