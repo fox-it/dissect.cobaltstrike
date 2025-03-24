@@ -13,16 +13,20 @@ Other research on Beacon Guardrails:
 .. _T1480: https://attack.mitre.org/techniques/T1480/
 """
 
+from __future__ import annotations
+
 import collections
 import functools
 import io
 import logging
-from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import BinaryIO
+from typing import TYPE_CHECKING, BinaryIO
 
 from dissect.cobaltstrike.utils import grouper, u32be, xor
 from dissect.cstruct import cstruct
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 log = logging.getLogger(__name__)
 
