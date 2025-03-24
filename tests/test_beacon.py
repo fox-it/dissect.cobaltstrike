@@ -333,3 +333,35 @@ def test_beacon_dump_multiple_files(beacon_x86_path, beacon_x64_path, tmp_path):
     proc.check_returncode()
     assert "9b9e85b111d9bef8d599905a06be0d207c388c4acaab8e74a01c04406fe26309" in proc.stdout.decode()
     assert "71fab2149cbdce552f00e6d75372494d3f7755d366fd6849a6d5c9e0f73bc40f" in proc.stdout.decode()
+
+
+def test_beacon_dump_default_xor_keys_only(beacon_custom_xorkey_path, tmp_path):
+    # default behavior is to try all xor keys, and we should find a valid beacon
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dissect.cobaltstrike.beacon",
+            str(beacon_custom_xorkey_path),
+        ],
+        capture_output=True,
+    )
+    assert proc.returncode == 0
+    assert b"SETTING_PUBKEY = '36aff0b273cb7aa704e4219ad3be78defcc8c1d7ecb779d55f438e82c7138673'" in proc.stdout
+    proc.check_returncode()
+
+    # When we enable --default-xor-keys-only, we should not find a valid beacon
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dissect.cobaltstrike.beacon",
+            str(beacon_custom_xorkey_path),
+            "--default-xor-keys-only",
+        ],
+        capture_output=True,
+    )
+    assert proc.returncode == 1
+    assert b"No beacon configuration found" in proc.stderr
+    with pytest.raises(subprocess.CalledProcessError):
+        proc.check_returncode()

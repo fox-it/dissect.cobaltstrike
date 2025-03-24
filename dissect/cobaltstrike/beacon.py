@@ -1128,10 +1128,9 @@ def build_parser():
         help="override default xor key(s) (default: -x 0x69 -x 0x2e -x 0x00)",
     )
     parser.add_argument(
-        "-a",
-        "--all",
+        "--default-xor-keys-only",
         action="store_true",
-        help="try all other single byte xor keys when default ones fail",
+        help="only try the default xor keys instead of all possible ones",
     )
     parser.add_argument(
         "-t",
@@ -1175,9 +1174,9 @@ def main():
         try:
             if fname in ("-", "/dev/stdin"):
                 with io.BytesIO(sys.stdin.buffer.read()) as fin:
-                    config = BeaconConfig.from_file(fin, xor_keys=xor_keys, all_xor_keys=args.all)
+                    config = BeaconConfig.from_file(fin, xor_keys=xor_keys, all_xor_keys=not args.default_xor_keys_only)
             else:
-                config = BeaconConfig.from_path(fname, xor_keys=xor_keys, all_xor_keys=args.all)
+                config = BeaconConfig.from_path(fname, xor_keys=xor_keys, all_xor_keys=not args.default_xor_keys_only)
         except ValueError:
             print(f"{fname}: No beacon configuration found.", file=sys.stderr)
             continue
