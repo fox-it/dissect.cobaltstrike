@@ -9,7 +9,6 @@ import functools
 import hashlib
 import io
 import ipaddress
-import itertools
 import logging
 import sys
 import time
@@ -36,8 +35,10 @@ from typing import (
 
 from dissect import cstruct
 from dissect.cobaltstrike import pe
+from dissect.cobaltstrike.guardrails import find_xor_key_candidates, iter_guardrail_configs_with_beacon
 from dissect.cobaltstrike.utils import (
     catch_sigpipe,
+    grouper,
     iter_find_needle,
     p8,
     u16be,
@@ -464,13 +465,6 @@ def iter_settings(fobj: Union[bytes, BinaryIO]) -> Iterator["Setting"]:
         yield setting
 
 
-def grouper(iterable, n, fillvalue=None):
-    "Collect data into fixed-length chunks or blocks"
-    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-    args = [iter(iterable)] * n
-    return itertools.zip_longest(*args, fillvalue=fillvalue)
-
-
 def parse_recover_binary(program: bytes) -> List[Tuple[str, Union[int, bool]]]:
     """Parse ``SETTING_C2_RECOVER`` (`.http-get.server.output`) data"""
     rsteps: List[Tuple[str, Union[int, bool]]] = []
@@ -809,6 +803,21 @@ class BeaconConfig:
             bconfig.architecture = pe.find_architecture(fh)
             # Return the first found beacon config.
             return bconfig
+
+        # Try finding Beacon config protected with Guardrails
+        try:
+            fxor = XorEncodedFile.from_file(fobj)
+        except ValueError:
+            fxor = fobj
+        for grconfig in iter_guardrail_configs_with_beacon(fxor):
+            if not grconfig.unmasked_beacon_config:
+                continue
+            bconfig = cls(grconfig.unmasked_beacon_config)
+            bconfig.xorkey = grconfig.payload_xor_key
+            bconfig.pe_compile_stamp, bconfig.pe_export_stamp = pe.find_compile_stamps(fxor)
+            bconfig.architecture = pe.find_architecture(fxor)
+            return bconfig
+
         raise ValueError("No valid Beacon configuration found")
 
     @classmethod

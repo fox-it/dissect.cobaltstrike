@@ -80,11 +80,13 @@ PE_EXPORT_STAMP_TO_VERSION: Dict[int, str] = {
     0x63EE056C: "Cobalt Strike 4.8 (Feb 28, 2023)",
     0x63EE0587: "Cobalt Strike 4.8 (Feb 28, 2023)",
     0x64F88C5E: "Cobalt Strike 4.9 (Sep 19, 2023)",
+    0x64F88C7E: "Cobalt Strike 4.9 (Sep 19, 2023)",
     0x64F88C9E: "Cobalt Strike 4.9 (Sep 19, 2023)",
     0x64F88CDE: "Cobalt Strike 4.9 (Sep 19, 2023)",
     0x6691500F: "Cobalt Strike 4.10 (Jul 16, 2024)",
     0x66915020: "Cobalt Strike 4.10 (Jul 16, 2024)",
     0x66915022: "Cobalt Strike 4.10 (Jul 16, 2024)",
+    0x66915024: "Cobalt Strike 4.10 (Jul 16, 2024)",
 }
 """ PE export timestamp to Cobalt Strike version mapping """
 
