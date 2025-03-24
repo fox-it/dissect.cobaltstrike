@@ -35,7 +35,7 @@ from typing import (
 
 from dissect import cstruct
 from dissect.cobaltstrike import pe
-from dissect.cobaltstrike.guardrails import find_xor_key_candidates, iter_guardrail_configs_with_beacon
+from dissect.cobaltstrike.guardrails import GuardrailMetadata, iter_guardrail_configs_with_beacon
 from dissect.cobaltstrike.utils import (
     catch_sigpipe,
     grouper,
@@ -767,6 +767,8 @@ class BeaconConfig:
         """ PE compile timestamp, ``None`` if unknown. """
         self.architecture: Optional[str] = None
         """ PE architecture, ``"x86"`` or ``"x64"`` and  ``None`` if unknown. """
+        self.guardrail_config: Optional[GuardrailMetadata] = None
+        """ Guardrail configuration, ``None`` if not available. """
 
         # Used for caching
         self._settings: Optional[Mapping[str, Any]] = None
@@ -813,6 +815,7 @@ class BeaconConfig:
             if not grconfig.unmasked_beacon_config:
                 continue
             bconfig = cls(grconfig.unmasked_beacon_config)
+            bconfig.guardrail_config = grconfig
             bconfig.xorkey = grconfig.payload_xor_key
             bconfig.pe_compile_stamp, bconfig.pe_export_stamp = pe.find_compile_stamps(fxor)
             bconfig.architecture = pe.find_architecture(fxor)
@@ -1117,7 +1120,7 @@ def build_parser():
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("input", metavar="FILE", help="Beacon to dump")
+    parser.add_argument("input", metavar="FILE", nargs="+", help="Beacon to dump")
     parser.add_argument(
         "-x",
         "--xorkey",
@@ -1159,63 +1162,71 @@ def main():
     level = levels[min(len(levels) - 1, args.verbose)]
     logging.basicConfig(
         level=level,
-        datefmt="[%X]",
-        format="%(asctime)s %(name)s %(message)s",
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
     xor_keys = None
     if args.xorkey:
         xor_keys = tuple(utils.pack_be(int(x, 0)) for x in args.xorkey)
 
-    try:
-        if args.input in ("-", "/dev/stdin"):
-            with io.BytesIO(sys.stdin.buffer.read()) as fin:
-                config = BeaconConfig.from_file(fin, xor_keys=xor_keys, all_xor_keys=args.all)
-        else:
-            config = BeaconConfig.from_path(args.input, xor_keys=xor_keys, all_xor_keys=args.all)
-    except ValueError:
-        print(f"{args.input}: No beacon configuration found.", file=sys.stderr)
-        return 1
+    dumped = False
+    for fname in args.input:
+        logging.info("Processing: %r", fname)
+        try:
+            if fname in ("-", "/dev/stdin"):
+                with io.BytesIO(sys.stdin.buffer.read()) as fin:
+                    config = BeaconConfig.from_file(fin, xor_keys=xor_keys, all_xor_keys=args.all)
+            else:
+                config = BeaconConfig.from_path(fname, xor_keys=xor_keys, all_xor_keys=args.all)
+        except ValueError:
+            print(f"{fname}: No beacon configuration found.", file=sys.stderr)
+            continue
 
-    if args.type == "raw":
-        for setting in config.settings_tuple:
-            print(setting)
-    elif args.type == "dumpstruct":
-        cstruct.hexdump(config.config_block)
-        print("-----")
-        for setting in config.settings_tuple:
-            cstruct.dumpstruct(setting)
-            print("-" * 10)
-    elif args.type == "normal":
-        settings = config.settings
-        for setting, value in settings.items():
-            print(f"{setting} = {value!r}")
-        if args.verbose >= 1:
-            print("-" * 50)
-            print(
-                "pe_export_stamp = {}, {}, {}".format(
-                    config.pe_export_stamp,
-                    hex(config.pe_export_stamp),
-                    time.ctime(config.pe_export_stamp),
+        dumped = True
+        if args.type == "raw":
+            for setting in config.settings_tuple:
+                print(setting)
+        elif args.type == "dumpstruct":
+            cstruct.hexdump(config.config_block)
+            print("-----")
+            for setting in config.settings_tuple:
+                cstruct.dumpstruct(setting)
+                print("-" * 10)
+        elif args.type == "normal":
+            settings = config.settings
+            for setting, value in settings.items():
+                print(f"{setting} = {value!r}")
+            if args.verbose >= 1:
+                print("-" * 50)
+                print(
+                    "pe_export_stamp = {}, {}, {}".format(
+                        config.pe_export_stamp,
+                        hex(config.pe_export_stamp),
+                        time.ctime(config.pe_export_stamp),
+                    )
                 )
-            )
-            print(
-                "pe_compile_stamp = {}, {}, {}".format(
-                    config.pe_compile_stamp,
-                    hex(config.pe_compile_stamp),
-                    time.ctime(config.pe_compile_stamp),
+                print(
+                    "pe_compile_stamp = {}, {}, {}".format(
+                        config.pe_compile_stamp,
+                        hex(config.pe_compile_stamp),
+                        time.ctime(config.pe_compile_stamp),
+                    )
                 )
-            )
-            print(
-                "max_setting_enum = {} - {}".format(
-                    config.max_setting_enum,
-                    BeaconSetting(config.max_setting_enum),
+                print(
+                    "max_setting_enum = {} - {}".format(
+                        config.max_setting_enum,
+                        BeaconSetting(config.max_setting_enum),
+                    )
                 )
-            )
-            print("beacon_version =", config.version)
-    elif args.type == "c2profile":
-        profile = c2profile.C2Profile.from_beacon_config(config)
-        print(profile.as_text())
+                print("beacon_version =", config.version)
+                if config.guardrail_config:
+                    print("guardrail payload xor key =", config.guardrail_config.payload_xor_key)
+                    print("guardrail options =", [s.option for s in config.guardrail_config.settings])
+        elif args.type == "c2profile":
+            profile = c2profile.C2Profile.from_beacon_config(config)
+            print(profile.as_text())
+
+    return 0 if dumped else 1
 
 
 if __name__ == "__main__":

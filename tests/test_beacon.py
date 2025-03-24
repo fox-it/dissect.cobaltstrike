@@ -323,3 +323,13 @@ def test_beacon_setting_unknown_enum():
     config = beacon.BeaconConfig(data)
     assert None not in config.settings
     assert dict(config.settings) == {"BeaconSetting_6969": b"foo"}
+
+
+def test_beacon_dump_multiple_files(beacon_x86_path, beacon_x64_path, tmp_path):
+    proc = subprocess.run(
+        [sys.executable, "-m", "dissect.cobaltstrike.beacon", str(beacon_x86_path), str(beacon_x64_path)],
+        capture_output=True,
+    )
+    proc.check_returncode()
+    assert "9b9e85b111d9bef8d599905a06be0d207c388c4acaab8e74a01c04406fe26309" in proc.stdout.decode()
+    assert "71fab2149cbdce552f00e6d75372494d3f7755d366fd6849a6d5c9e0f73bc40f" in proc.stdout.decode()

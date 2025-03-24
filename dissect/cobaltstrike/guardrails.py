@@ -87,6 +87,8 @@ class GuardrailMetadata:
     """ XOR key used to unmask the beacon configuration. This is the environmental key """
     unmasked_beacon_config: bytes
     """ Unmasked beacon configuration """
+    settings: list[GuardrailSetting]
+    """ List of guardrail settings """
 
 
 def iter_guardrail_configs(fh: BinaryIO, xorkey: bytes = b"\x8a") -> Iterator[GuardrailMetadata]:
@@ -110,10 +112,12 @@ def iter_guardrail_configs(fh: BinaryIO, xorkey: bytes = b"\x8a") -> Iterator[Gu
 
             fh = io.BufferedReader(io.BytesIO(unmasked_guard_config))
             checksum = 0
+            settings: list[GuardrailSetting] = []
             while True:
                 if fh.peek(2)[:2] == b"\x00\x00":
                     break
                 setting = GuardrailSetting(fh)
+                settings.append(setting)
                 log.debug(setting)
                 if setting.option == GuardOption.GUARD_PAYLOAD_CHECKSUM:
                     checksum = u32be(setting.value)
@@ -129,6 +133,7 @@ def iter_guardrail_configs(fh: BinaryIO, xorkey: bytes = b"\x8a") -> Iterator[Gu
                 guardrail_xor_key=xorkey,
                 payload_xor_key=None,
                 unmasked_beacon_config=None,
+                settings=settings,
             )
         offset += 1
 
