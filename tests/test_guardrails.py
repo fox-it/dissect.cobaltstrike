@@ -3,6 +3,7 @@ import sys
 
 import pytest
 
+from dissect.cobaltstrike.beacon import BeaconConfig
 from dissect.cobaltstrike.guardrails import GUARD_CONFIG_STARTS, c_guardrails
 
 
@@ -44,3 +45,16 @@ def test_beacon_dump_guardrails(guardrails_beacon_path):
     assert b"Found guardrail payload xorkey: b'desktop-r4vgq8o'" in stderr
     assert b"guardrail payload xor key = b'desktop-r4vgq8o'" in stdout
     assert b"guardrail options = [<GuardOption.GUARD_COMPUTER: 6>, <GuardOption.GUARD_PAYLOAD_CHECKSUM: 9>]" in stdout
+
+
+def test_beacon_guardrails_metadata(guardrails_beacon_file, beacon_x64_file):
+    beacon = BeaconConfig.from_file(guardrails_beacon_file)
+    assert beacon.guardrails is not None
+    assert beacon.guardrails.payload_xor_key == b"desktop-r4vgq8o"
+    assert beacon.guardrails.settings[0].option == c_guardrails.GuardOption.GUARD_COMPUTER
+    assert beacon.guardrails.settings[1].option == c_guardrails.GuardOption.GUARD_PAYLOAD_CHECKSUM
+    assert beacon.guardrails.checksum == 0xA5AD1
+    assert beacon.guardrails.guardrail_xor_key == b"\x8a"
+
+    beacon = BeaconConfig.from_file(beacon_x64_file)
+    assert beacon.guardrails is None

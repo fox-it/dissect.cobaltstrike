@@ -767,8 +767,8 @@ class BeaconConfig:
         """ PE compile timestamp, ``None`` if unknown. """
         self.architecture: Optional[str] = None
         """ PE architecture, ``"x86"`` or ``"x64"`` and  ``None`` if unknown. """
-        self.guardrail_config: Optional[GuardrailMetadata] = None
-        """ Guardrail configuration, ``None`` if not available. """
+        self.guardrails: Optional[GuardrailMetadata] = None
+        """ Guardrails metadata, ``None`` if not available. """
 
         # Used for caching
         self._settings: Optional[Mapping[str, Any]] = None
@@ -815,7 +815,7 @@ class BeaconConfig:
             if not grconfig.unmasked_beacon_config:
                 continue
             bconfig = cls(grconfig.unmasked_beacon_config)
-            bconfig.guardrail_config = grconfig
+            bconfig.guardrails = grconfig
             bconfig.xorkey = grconfig.payload_xor_key
             bconfig.pe_compile_stamp, bconfig.pe_export_stamp = pe.find_compile_stamps(fxor)
             bconfig.architecture = pe.find_architecture(fxor)
@@ -1218,9 +1218,9 @@ def main():
                     )
                 )
                 print("beacon_version =", config.version)
-                if config.guardrail_config:
-                    print("guardrail payload xor key =", config.guardrail_config.payload_xor_key)
-                    print("guardrail options =", [s.option for s in config.guardrail_config.settings])
+                if config.guardrails:
+                    print("guardrail payload xor key =", config.guardrails.payload_xor_key)
+                    print("guardrail options =", [s.option for s in config.guardrails.settings])
         elif args.type == "c2profile":
             profile = c2profile.C2Profile.from_beacon_config(config)
             print(profile.as_text())
