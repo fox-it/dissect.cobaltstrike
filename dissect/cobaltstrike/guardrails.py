@@ -112,13 +112,13 @@ def iter_guardrail_configs(fh: BinaryIO, xorkey: bytes = b"\x8a") -> Iterator[Gu
             masked_guard_config = fh.read(GUARD_PATCH_SIZE)
             unmasked_guard_config = xor(xor(masked_guard_config, masked_beacon_config[::-1]), xorkey)
 
-            fh = io.BufferedReader(io.BytesIO(unmasked_guard_config))
+            fh_guard = io.BufferedReader(io.BytesIO(unmasked_guard_config))
             checksum = 0
             settings: list[GuardrailSetting] = []
             while True:
-                if fh.peek(2)[:2] == b"\x00\x00":
+                if fh_guard.peek(2)[:2] == b"\x00\x00":
                     break
-                setting = GuardrailSetting(fh)
+                setting = GuardrailSetting(fh_guard)
                 settings.append(setting)
                 log.debug(setting)
                 if setting.option == GuardOption.GUARD_PAYLOAD_CHECKSUM:
