@@ -14,7 +14,7 @@ def test_guard_config_start_size() -> None:
 
 
 @pytest.mark.parametrize(
-    "guard_option,type,length",
+    "guard_option,settings_type,length",
     [
         (c_guardrails.GuardOption.GUARD_USER, c_guardrails.SettingsType.TYPE_SHORT, 2),
         (c_guardrails.GuardOption.GUARD_COMPUTER, c_guardrails.SettingsType.TYPE_SHORT, 2),
