@@ -4,6 +4,7 @@ This module contains generic helper functions used by ``dissect.cobaltstrike``.
 
 import errno
 import io
+import itertools
 import os
 import random
 import re
@@ -280,3 +281,10 @@ class LRUDict(OrderedDict):
         if len(self) > self.maxsize:
             oldest = next(iter(self))
             del self[oldest]
+
+
+def grouper(iterable, n, fillvalue=None):
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return itertools.zip_longest(*args, fillvalue=fillvalue)
