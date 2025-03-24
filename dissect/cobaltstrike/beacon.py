@@ -816,7 +816,7 @@ class BeaconConfig:
                 continue
             bconfig = cls(grconfig.unmasked_beacon_config)
             bconfig.guardrails = grconfig
-            bconfig.xorkey = grconfig.payload_xor_key
+            bconfig.xorkey = grconfig.beacon_xor_key
             bconfig.pe_compile_stamp, bconfig.pe_export_stamp = pe.find_compile_stamps(fxor)
             bconfig.architecture = pe.find_architecture(fxor)
             return bconfig

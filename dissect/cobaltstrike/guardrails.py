@@ -83,8 +83,10 @@ class GuardrailMetadata:
     """ Unmasked guardrail configuration """
     checksum: int
     """ Extracted payload checksum from guardrail configuration. This is used to validate the beacon configuration """
+    beacon_xor_key: bytes
+    """ XOR key used to mask the beacon configuration. (0x2e by default unless modified beacon) """
     payload_xor_key: bytes
-    """ XOR key used to unmask the beacon configuration. This is the environmental key """
+    """ XOR key used to unmask the guarded beacon configuration. This is the environmental key """
     unmasked_beacon_config: bytes
     """ Unmasked beacon configuration """
     settings: list[GuardrailSetting]
@@ -131,6 +133,7 @@ def iter_guardrail_configs(fh: BinaryIO, xorkey: bytes = b"\x8a") -> Iterator[Gu
                 masked_beacon_config=masked_beacon_config,
                 unmasked_guard_config=unmasked_guard_config,
                 guardrail_xor_key=xorkey,
+                beacon_xor_key=b"\x2e",  # we currently only support the XOR default key
                 payload_xor_key=None,
                 unmasked_beacon_config=None,
                 settings=settings,
@@ -167,10 +170,10 @@ def iter_guardrail_configs_with_beacon(fh: BinaryIO) -> Iterator[GuardrailMetada
 
         # Unmask the beacon config, static single byte xor key should be 0x2E unless modified beacon
         # The beacon config is still masked with the environmental key
-        guarded_config = xor(grconfig.masked_beacon_config, b"\x2e")
+        grconfig.beacon_xor_key = b"\x2e"  # we currently only support the XOR default key
+        guarded_config = xor(grconfig.masked_beacon_config, grconfig.beacon_xor_key)
 
-        fh = io.BytesIO(guarded_config)
-        for xorkey in find_xor_key_candidates(fh):
+        for xorkey in find_xor_key_candidates(io.BytesIO(guarded_config)):
             unguarded = xor(guarded_config, xorkey)
 
             checksum = payload_checksum(unguarded) + 1
