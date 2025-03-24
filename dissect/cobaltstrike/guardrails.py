@@ -77,15 +77,15 @@ class GuardrailMetadata:
     """ Masked raw beacon configuration """
     masked_guard_config: bytes
     """ Masked raw guardrail configuration """
+    beacon_xor_key: bytes
+    """ Single byte XOR key used to mask the beacon configuration. (0x2e by default unless modified beacon) """
     guardrail_xor_key: bytes
     """ Single byte XOR key used to unmask the guardrail configuration (0x8a by default unless modified beacon) """
     unmasked_guard_config: bytes
     """ Unmasked guardrail configuration """
     checksum: int
     """ Extracted payload checksum from guardrail configuration. This is used to validate the beacon configuration """
-    beacon_xor_key: bytes
-    """ XOR key used to mask the beacon configuration. (0x2e by default unless modified beacon) """
-    payload_xor_key: bytes
+    payload_xor_key: bytes | None
     """ XOR key used to unmask the guarded beacon configuration. This is the environmental key """
     unmasked_beacon_config: bytes
     """ Unmasked beacon configuration """
