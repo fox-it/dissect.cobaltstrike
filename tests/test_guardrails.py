@@ -22,11 +22,11 @@ def test_guard_config_start_size() -> None:
         (c_guardrails.GuardOption.GUARD_LOCAL_IP, c_guardrails.SettingsType.TYPE_INT, 4),
     ],
 )
-def test_guard_config_start_settings(guard_option, type, length) -> None:
+def test_guard_config_start_settings(guard_option, settings_type, length) -> None:
     """Test correctness of the known Guardrail start bytes by constructing the GuardrailSetting."""
     guard_option_user = c_guardrails.GuardrailSetting(
         option=guard_option,
-        type=type,
+        type=settings_type,
         length=length,
         value=b"",  # ignored
     ).dumps()
