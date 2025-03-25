@@ -2,15 +2,16 @@
 This module is responsible for finding and recovering Beacon Guardrails configuration from Cobalt Strike payloads.
 Guardrails is an additional layer of protection to the beacon config by using environmental keying (`T1480`_).
 
-Beacon Guardrails was introduced in Cobalt Strike 4.8:
+.. note::
+    Beacon Guardrails was introduced in Cobalt Strike 4.8:
 
- - https://www.cobaltstrike.com/blog/cobalt-strike-4-8-system-call-me-maybe
+    - https://www.cobaltstrike.com/blog/cobalt-strike-4-8-system-call-me-maybe
 
-Other research on Beacon Guardrails:
+    Other research on Beacon Guardrails:
 
- - https://itea.org/journals/volume-45-3/cobalt-strike-cyber-assessment-challenge/
+    - https://itea.org/journals/volume-45-3/cobalt-strike-cyber-assessment-challenge/
 
-.. _T1480: https://attack.mitre.org/techniques/T1480/
+    .. _T1480: https://attack.mitre.org/techniques/T1480/
 """
 
 from __future__ import annotations
