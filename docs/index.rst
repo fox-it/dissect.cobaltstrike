@@ -43,6 +43,7 @@ Source code can be found here:
    API reference <autoapi/dissect/cobaltstrike/index>
    structures/index
    c2profile-grammar
+   beacon-version-identification
 
 .. toctree::
    :caption: Links

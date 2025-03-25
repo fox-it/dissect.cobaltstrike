@@ -12,8 +12,11 @@
 #
 import os
 import sys
+from datetime import datetime
 
 sys.path.insert(0, os.path.abspath("../"))
+sys.path.append(os.path.abspath("_ext"))
+
 
 # Get version info from dissect.cobaltstrike._version
 try:
@@ -27,7 +30,7 @@ except ModuleNotFoundError:
 # -- Project information -----------------------------------------------------
 
 project = "dissect.cobaltstrike"
-copyright = "2022, Fox-IT part of NCC Group"
+copyright = f"2022-{datetime.now().year}, Fox-IT part of NCC Group"
 author = "Fox-IT part of NCC Group"
 
 
@@ -48,6 +51,7 @@ extensions = [
     "sphinx_copybutton",
     "autoapi.extension",
     "sphinx_argparse_cli",
+    "generate_beacon_version_csv",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
