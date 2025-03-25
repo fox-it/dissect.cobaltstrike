@@ -1,5 +1,4 @@
 import csv
-import datetime
 from datetime import datetime, timezone
 
 from dissect.cobaltstrike.version import PE_EXPORT_STAMP_TO_VERSION
@@ -25,7 +24,7 @@ def generate_csv(app):
                 [
                     pe_export_stamp,
                     f"0x{pe_export_stamp:08x}",
-                    datetime.fromtimestamp(pe_export_stamp, timezone.utc).strftime("%c"),
+                    datetime.fromtimestamp(pe_export_stamp, timezone.utc).strftime("%a %b %d %H:%M:%S %Y"),
                     version,
                 ]
             )
