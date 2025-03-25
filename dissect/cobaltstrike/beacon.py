@@ -1198,10 +1198,11 @@ def main():
             if args.verbose >= 1:
                 print("-" * 50)
                 print(
-                    "pe_export_stamp = {}, {}, {}".format(
+                    "pe_export_stamp = {}, {}, {} - {}".format(
                         config.pe_export_stamp,
                         hex(config.pe_export_stamp),
                         time.ctime(config.pe_export_stamp),
+                        config.version,
                     )
                 )
                 print(
