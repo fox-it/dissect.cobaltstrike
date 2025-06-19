@@ -617,7 +617,7 @@ def parse_beacon_gate(data: bytes) -> BeaconGateOptions:
 
 def beacon_gate_options_string(bgo: BeaconGateOptions) -> list[str]:
     """Return the enabled BeaconGate WinAPI's as a list of strings"""
-    options = {k for k, v in bgo._values.items() if v}
+    options = {k for k, v in bgo.__values__.items() if v}
 
     comms = {"InternetOpenA", "InternetConnectA"}
     core = {
