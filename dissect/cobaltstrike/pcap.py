@@ -77,7 +77,7 @@ def c2packet_to_record(c2packet: C2Packet) -> Record:
     """Convert `c2packet` to a flow.record."""
     fields = []
     fields.append(("bytes", "raw_http"))
-    kv = c2packet._values
+    kv = c2packet.__values__
     for field in c2packet._type.fields:
         ftype = str(field.type)
         if ftype.startswith("char"):
