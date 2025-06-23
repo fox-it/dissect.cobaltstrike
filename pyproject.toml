@@ -13,7 +13,7 @@ authors = [
     {name = "Yun Zheng Hu", email = "hu@fox-it.com"},
 ]
 dependencies = [
-    "dissect.cstruct >= 4.2",
+    "dissect.cstruct >= 4.6.dev",
     "lark",
 ]
 keywords = ["dissect", "cobaltstrike", "beacon", "parser", "parsing", "lark", "cstruct"]
