@@ -27,7 +27,7 @@ If you want to install the latest pre-release version, use the ``--pre`` flag::
 
    $ pip install --pre dissect.cobaltstrike
 
-**dissect.cobaltstrike** requires Python 3.9 or later.
+**dissect.cobaltstrike** requires Python 3.10 or later.
 
 Documentation
 -------------

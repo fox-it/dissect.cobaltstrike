@@ -7,12 +7,16 @@ The easiest way to install ``dissect.cobaltstrike`` is to use **pip**:
 
     $ pip install dissect.cobaltstrike
 
-Python 3.9 or higher is required and it has the following dependencies:
+Python 3.10 or higher is required and it has the following dependencies:
 
 * dissect.cstruct_ - for structure parsing
+* dissect.executable_ - for PE parsing
+* dissect.util_ - for useful file stream functions
 * lark_ - for parsing malleable c2 profiles
 
 .. _dissect.cstruct: https://github.com/fox-it/dissect.cstruct
+.. _dissect.executable: https://github.com/fox-it/dissect.executable
+.. _dissect.util: https://github.com/fox-it/dissect.util
 .. _lark: https://github.com/lark-parser/lark
 
 The following pip `extras` flavours are provided as well:
@@ -79,11 +83,17 @@ run tests with `checksum8` in the name including verbose and stdout logging:
 Linting
 -------
 
-For linting (black and flake8):
+For linting, run: 
 
 .. code-block:: shell
 
      $ tox -e lint
+
+If there are any linting issues you can try to "fix" them using:
+
+.. code-block:: shell
+
+     $ tox -e fix
 
 Documentation
 -------------
