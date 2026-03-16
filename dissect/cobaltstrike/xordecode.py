@@ -118,7 +118,7 @@ class XorEncodedFile(io.RawIOBase):
             logger.debug(f"Found common nonce offset: {offset} ({count})")
             found_nonce_offset = offset
             xf = cls(fh, nonce_offset=found_nonce_offset)
-            if pe.find_mz_offset(cast(BinaryIO, xf)) is not None:
+            if pe.find_mz_offset(cast("BinaryIO", xf)) is not None:
                 xf.seek(0)
                 return xf
         raise ValueError(f"MZ header not found for: {fh}")

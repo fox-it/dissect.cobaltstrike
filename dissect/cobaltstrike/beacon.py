@@ -369,7 +369,7 @@ def iter_beacon_config_blocks(
     # Try XorEncoded files first as they are more common
     if not found and xordecode:
         try:
-            fxor = cast(BinaryIO, XorEncodedFile.from_file(fobj))
+            fxor = cast("BinaryIO", XorEncodedFile.from_file(fobj))
             for xorkey in xor_keys:
                 for config_block in find_beacon_config_bytes(fxor, xorkey):
                     found = True
