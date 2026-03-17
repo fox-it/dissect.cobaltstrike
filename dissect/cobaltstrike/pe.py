@@ -182,6 +182,7 @@ NT_SIGNATURE = c_pe.IMAGE_NT_SIGNATURE.to_bytes(4, "little")
 OS2_SIGNATURE = c_pe.IMAGE_OS2_SIGNATURE.to_bytes(4, "little")
 IMAGE_DOS_SIGNATURE = c_pe.IMAGE_DOS_SIGNATURE.to_bytes(2, "little")
 
+
 class LenientPE(PE):
     """Wrapper around :class:`dissect.executable.PE` that is lenient towards invalid PE signatures.
 
@@ -262,10 +263,6 @@ def find_compile_stamps(
         Tuple with ``(IMAGE_FILE_HEADER.TimeDateStamp, IMAGE_EXPORT_DIRECTORY.TimeDateStamp)``.
         Either tuple values can be ``None`` if it's not found.
     """
-    mz_offset = find_mz_offset(fh, start_offset=start_offset, maxrange=maxrange)
-    if mz_offset is None:
-        return (None, None)
-
     compile_stamp = None
     export_stamp = None
 
