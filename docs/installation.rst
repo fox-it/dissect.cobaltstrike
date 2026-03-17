@@ -83,7 +83,7 @@ run tests with `checksum8` in the name including verbose and stdout logging:
 Linting
 -------
 
-For linting, run: 
+For linting, run:
 
 .. code-block:: shell
 
