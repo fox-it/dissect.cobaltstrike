@@ -62,7 +62,7 @@ def test_c2profile_generator():
 
 
 def test_value_to_string():
-    val = b"\xCA\xFE\xBA\xBE"
+    val = b"\xca\xfe\xba\xbe"
     assert c2profile.value_to_string(val) == '"\\xca\\xfe\\xba\\xbe"'
     val = b"\x00\x22\x27"
     assert c2profile.value_to_string(val) == '"\\x00\\"\'"'

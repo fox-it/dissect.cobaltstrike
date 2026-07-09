@@ -8,6 +8,10 @@ import io
 import logging
 from typing import BinaryIO, Optional, Tuple
 
+from dissect.executable import PE
+from dissect.executable.pe.c_pe import c_pe
+from dissect.util.stream import OverlayStream, RangeStream
+
 from dissect import cstruct
 
 logger = logging.getLogger(__name__)
@@ -174,6 +178,39 @@ pestruct.load(PE_DEF)
 DOSHEADER_X64 = bytes.fromhex("554889e54881")
 DOSHEADER_X86 = bytes.fromhex("e8000000005b")
 
+NT_SIGNATURE = c_pe.IMAGE_NT_SIGNATURE.to_bytes(4, "little")
+OS2_SIGNATURE = c_pe.IMAGE_OS2_SIGNATURE.to_bytes(4, "little")
+IMAGE_DOS_SIGNATURE = c_pe.IMAGE_DOS_SIGNATURE.to_bytes(2, "little")
+
+
+class LenientPE(PE):
+    """Wrapper around :class:`dissect.executable.PE` that is lenient towards invalid PE signatures.
+
+    This is accomplished by using an OverlayStream to patch the PE signature when it's invalid.
+
+    It currently overlays the following fixes:
+
+        - Invalid PE signature (not "PE\0\0")
+        - Invalid MZ signature (not "MZ")
+    """
+
+    def __init__(self, fh: BinaryIO) -> None:
+        fh.seek(0)
+        mz_header = c_pe.IMAGE_DOS_HEADER(fh)
+        overlay = OverlayStream(fh, size=fh.seek(0, io.SEEK_END))
+        if mz_header.e_magic != c_pe.IMAGE_DOS_SIGNATURE:
+            logger.debug("Patching invalid MZ signature: %r -> %r", mz_header.e_magic, IMAGE_DOS_SIGNATURE)
+            overlay.add(0, IMAGE_DOS_SIGNATURE)
+            fh = overlay
+
+        fh.seek(mz_header.e_lfanew, io.SEEK_SET)
+        signature = fh.read(4)
+        if signature not in (NT_SIGNATURE, OS2_SIGNATURE):
+            logger.debug("Patching invalid PE signature: %r -> %r", signature, NT_SIGNATURE)
+            overlay.add(mz_header.e_lfanew, NT_SIGNATURE)
+            fh = overlay
+        super().__init__(fh)
+
 
 def find_mz_offset(fh: BinaryIO, start_offset: int = 0, maxrange: int = 1024) -> Optional[int]:
     """Find and return the start offset of a valid IMAGE_DOS_HEADER or ``None`` if it cannot be found.
@@ -226,35 +263,15 @@ def find_compile_stamps(
         Tuple with ``(IMAGE_FILE_HEADER.TimeDateStamp, IMAGE_EXPORT_DIRECTORY.TimeDateStamp)``.
         Either tuple values can be ``None`` if it's not found.
     """
-    mz_offset = find_mz_offset(fh, start_offset=start_offset, maxrange=maxrange)
-    if mz_offset is None:
-        return (None, None)
-
     compile_stamp = None
     export_stamp = None
-    fh.seek(mz_offset)
-    mz = pestruct.IMAGE_DOS_HEADER(fh)
-    fh.seek(mz.e_lfanew + mz_offset)
-    signature = pestruct.uint32(fh).to_bytes(4, "little")
-    logger.debug("PE signature: %r", signature)
-    image = pestruct.IMAGE_FILE_HEADER(fh)
-    compile_stamp = image.TimeDateStamp
-    if image.Machine == pestruct.IMAGE_FILE_MACHINE_AMD64:
-        optional_header = pestruct.IMAGE_OPTIONAL_HEADER64(fh)
-    else:
-        optional_header = pestruct.IMAGE_OPTIONAL_HEADER(fh)
-    export_dd = optional_header.DataDirectory[pestruct.IMAGE_DIRECTORY_ENTRY_EXPORT]
-    sections = [pestruct.IMAGE_SECTION_HEADER(fh) for _ in range(image.NumberOfSections)]
-    ds = None
-    for section in sections:
-        if section.VirtualAddress <= export_dd.VirtualAddress < (section.VirtualAddress + section.VirtualSize):
-            ds = section
-            break
-    if ds is not None:
-        offset = export_dd.VirtualAddress - ds.VirtualAddress + ds.PointerToRawData + mz_offset
-        fh.seek(offset)
-        export_dir = pestruct.IMAGE_EXPORT_DIRECTORY(fh)
-        export_stamp = export_dir.TimeDateStamp
+
+    mz_offset = find_mz_offset(fh, start_offset=start_offset, maxrange=maxrange)
+    if mz_offset is not None:
+        pe = LenientPE(RangeStream(fh, offset=mz_offset, size=None))
+        compile_stamp = int(pe.timestamp.timestamp())
+        export_stamp = int(pe.exports.timestamp.timestamp()) if pe.exports else None
+
     return (compile_stamp, export_stamp)
 
 

@@ -23,8 +23,9 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, BinaryIO
 
-from dissect.cobaltstrike.utils import grouper, u32be, xor
 from dissect.cstruct import cstruct
+
+from dissect.cobaltstrike.utils import grouper, u32be, xor
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -172,7 +173,6 @@ def payload_checksum(data: bytes) -> int:
 
 def iter_guardrail_configs_with_beacon(fh: BinaryIO) -> Iterator[GuardrailMetadata]:
     for grconfig in iter_guardrail_configs(fh):
-
         # Unmask the beacon config, static single byte xor key should be 0x2E unless modified beacon
         # The beacon config is still masked with the environmental key
         grconfig.beacon_xor_key = b"\x2e"  # we currently only support the XOR default key
