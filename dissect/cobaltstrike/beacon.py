@@ -1615,7 +1615,7 @@ def main():
                         if f.is_file():
                             yield str(f)
                 else:
-                    logging.warning("File not found: %r", fname)
+                    yield str(path)
 
     dumped = False
     for fname in iter_path(args.input):
