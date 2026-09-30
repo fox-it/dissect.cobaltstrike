@@ -13,6 +13,7 @@ from dissect.executable.pe.c_pe import c_pe
 from dissect.util.stream import OverlayStream, RangeStream
 
 from dissect import cstruct
+from dissect.cobaltstrike.utils import p16
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +183,8 @@ NT_SIGNATURE = c_pe.IMAGE_NT_SIGNATURE.to_bytes(4, "little")
 OS2_SIGNATURE = c_pe.IMAGE_OS2_SIGNATURE.to_bytes(4, "little")
 IMAGE_DOS_SIGNATURE = c_pe.IMAGE_DOS_SIGNATURE.to_bytes(2, "little")
 
+_MZ_SCAN_RANGE = 8192
+
 
 class LenientPE(PE):
     """Wrapper around :class:`dissect.executable.PE` that is lenient towards invalid PE signatures.
@@ -199,7 +202,7 @@ class LenientPE(PE):
         mz_header = c_pe.IMAGE_DOS_HEADER(fh)
         overlay = OverlayStream(fh, size=fh.seek(0, io.SEEK_END))
         if mz_header.e_magic != c_pe.IMAGE_DOS_SIGNATURE:
-            logger.debug("Patching invalid MZ signature: %r -> %r", mz_header.e_magic, IMAGE_DOS_SIGNATURE)
+            logger.debug("Patching invalid MZ signature: %r -> %r", p16(mz_header.e_magic), IMAGE_DOS_SIGNATURE)
             overlay.add(0, IMAGE_DOS_SIGNATURE)
             fh = overlay
 
@@ -212,7 +215,7 @@ class LenientPE(PE):
         super().__init__(fh)
 
 
-def find_mz_offset(fh: BinaryIO, start_offset: int = 0, maxrange: int = 1024) -> Optional[int]:
+def find_mz_offset(fh: BinaryIO, start_offset: int = 0, maxrange: int = _MZ_SCAN_RANGE) -> Optional[int]:
     """Find and return the start offset of a valid IMAGE_DOS_HEADER or ``None`` if it cannot be found.
 
     It uses `IMAGE_DOS_HEADER.e_lfanew` and `IMAGE_FILE_HEADER.Machine` as a constraint.
@@ -246,7 +249,7 @@ def find_mz_offset(fh: BinaryIO, start_offset: int = 0, maxrange: int = 1024) ->
 
 
 def find_compile_stamps(
-    fh: BinaryIO, start_offset: int = 0, maxrange: int = 1024
+    fh: BinaryIO, start_offset: int = 0, maxrange: int = _MZ_SCAN_RANGE
 ) -> Tuple[Optional[int], Optional[int]]:
     """Find and return a tuple with the `PE compile` and `PE export` timestamps.
 
@@ -269,13 +272,15 @@ def find_compile_stamps(
     mz_offset = find_mz_offset(fh, start_offset=start_offset, maxrange=maxrange)
     if mz_offset is not None:
         pe = LenientPE(RangeStream(fh, offset=mz_offset, size=None))
-        compile_stamp = int(pe.timestamp.timestamp())
-        export_stamp = int(pe.exports.timestamp.timestamp()) if pe.exports else None
+        if pe.timestamp is not None:
+            compile_stamp = int(pe.timestamp.timestamp())
+        if pe.exports and pe.exports.timestamp is not None:
+            export_stamp = int(pe.exports.timestamp.timestamp())
 
     return (compile_stamp, export_stamp)
 
 
-def find_magic_mz(fh: BinaryIO, start_offset: int = 0, maxrange: int = 1024) -> Optional[bytes]:
+def find_magic_mz(fh: BinaryIO, start_offset: int = 0, maxrange: int = _MZ_SCAN_RANGE) -> Optional[bytes]:
     """Find and returns the MZ header bytes or ``None`` if cannot be found
 
     Cobalt Strike allows changing the MZ magic header using `magic_mz_x86` or `magic_mz_x64` in the c2 profile.

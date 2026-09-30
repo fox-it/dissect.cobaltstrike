@@ -5,25 +5,34 @@ Not to be confused with the single byte XOR key that is used to obfuscate the be
 
 from __future__ import annotations
 
-import collections
 import contextlib
 import io
 import logging
 import sys
-from typing import TYPE_CHECKING, BinaryIO, cast
+from typing import TYPE_CHECKING, BinaryIO
 
 if TYPE_CHECKING:
-    from os import PathLike
-    from typing import Iterator, Union
+    from typing import Iterator
 
-from dissect.cobaltstrike.utils import catch_sigpipe, iter_find_needle, u32, xor
+from dissect.util.stream import RangeStream
 
-from . import pe
+from dissect.cobaltstrike.utils import catch_sigpipe, u32, xor
 
 logger = logging.getLogger(__name__)
 
+# Trailing padding after the encoded payload (custom stubs often leave a few extra bytes).
+# Stock CS is exact; keep the slack small.
+# Reference sample that has some slack: dc7fa7c67f059f792f69ae46d31413030fd034cd045765d145836246341bf968
+_MIN_DECODED_SIZE = 0x200
+_MAX_TRAILER = 256
 
-def iter_nonce_offsets(fh: BinaryIO, real_size: int = None, maxrange: int = 1024) -> Iterator[int]:
+
+def _xor_bytes(a, b):
+    """XOR two equal-length byte strings at C speed via big integers."""
+    return (int.from_bytes(a, "big") ^ int.from_bytes(b, "big")).to_bytes(len(a), "big")
+
+
+def iter_nonce_offsets(fh: BinaryIO, real_size: int | None = None, maxrange: int = 1024) -> Iterator[int]:
     """Returns a generator that yields nonce offset candidates based on encoded real_size.
 
     If real_size is None it will automatically determine the size from fh.
@@ -52,134 +61,108 @@ def iter_nonce_offsets(fh: BinaryIO, real_size: int = None, maxrange: int = 1024
         if len(nonce) != 4 or len(size) != 4:
             break
         decoded_size = u32(xor(nonce, size))
-        if decoded_size + i + 8 == real_size:
+        encoded_end = decoded_size + i + 8
+        if decoded_size < _MIN_DECODED_SIZE or encoded_end > real_size:
+            continue
+        if encoded_end == real_size:
             logger.debug("FOUND real_size, iter_nonce_offsets -> %u", i)
+            yield i
+        elif (real_size - encoded_end) <= _MAX_TRAILER:
+            logger.debug("FOUND real_size with slack (%d), iter_nonce_offsets -> %u", real_size - encoded_end, i)
             yield i
 
 
 class XorEncodedFile(io.RawIOBase):
-    """A file object providing transparent decoding of XorEncoded files.
+    _fp: BinaryIO = None
 
-    To verify if a file is a XorEncoded Beacon, use the :meth:`XorEncodedFile.from_file()` constructor
-    which raises ``ValueError`` if it cannot find a nonce candidate or valid MZ header.
+    def __init__(self, fp: BinaryIO, nonce: bytes) -> None:
+        assert len(nonce) == 4, "Nonce must be 4 bytes long"
+        self._fp = fp
+        self._nonce = nonce  # permanent - never changes
+        self._prev = nonce  # rolls forward, reset on seek
+        self._base = fp.tell() if fp.seekable() else 0
 
-    To skip any validation checks, construct via :meth:`XorEncodedFile` using `nonce_offset`.
-    """
-
-    EOF_SHELLCODE_MARKER = b"\xff\xff\xff"
-
-    def __init__(self, fh: BinaryIO, nonce_offset: int = 0) -> None:
-        self.fh = fh
-        self.nonce_offset = nonce_offset
-
-        self.fh.seek(self.nonce_offset)
-        self.initial_nonce = self.fh.read(4)
-        self.nonced_filesize = self.fh.read(4)
-
-    def __repr__(self) -> str:
-        return f"<XorEncodedFile fh={self.fh}, nonce_offset={self.nonce_offset}>"
+    def get_name(self) -> str:
+        return "XorEncodedFile"
 
     @classmethod
-    def from_file(cls, fh: BinaryIO, maxrange: int = 1024) -> "XorEncodedFile":
-        """Constructs a XorEncodedFile from file `fh`, raises ValueError if file not determined as a XorEncoded Beacon.
-
-        This constructor will try to find the correct ``nonce_offset`` by using the following methods:
-
-         - **end of shellcode offset**: will try to find the end of the shellcode stub.
-         - **real_size**: using :func:`iter_nonce_offsets()` to find candidate offsets based on size.
-
-        The ``nonce_offset`` candidates are then checked to see if there is a valid MZ header.
+    def from_file(cls, fh: BinaryIO, nonce_offset: int | None = None, maxrange: int = 1024) -> "XorEncodedFile":
+        """Constructs a XorEncodedFile from file `fh` as it's current nonce_offset.
 
         Args:
             fh: file-like object
-            maxrange: how far into the file should be try to find the `nonce_offset` candidates (default 1024)
+            nonce_offset: offset of the nonce in the file, if None it will try to find it automatically
+            maxrange: maximum range to search for nonce_offset if nonce_offset is None
+
+        Raises:
+            ValueError: if nonce_offset is None and no valid nonce offset could be found
 
         Returns:
             XorEncodedFile instance
-
-        Raises:
-            ValueError:  If it cannot find a `nonce_offset` or valid `MZ header`
         """
-        eof_shellcode_offsets = []
-        nonce_offsets = []
+        if nonce_offset is None:
+            nonce_offsets = list(iter_nonce_offsets(fh, real_size=None, maxrange=maxrange))
+            if not nonce_offsets:
+                raise ValueError("Could not find a valid nonce offset")
+            nonce_offset = nonce_offsets[0]
+            logger.debug("Found nonce offset: %d", nonce_offset)
 
-        nonce_offsets = list(iter_nonce_offsets(fh, maxrange=maxrange))
-        eof_shellcode_offsets = [
-            offset + len(cls.EOF_SHELLCODE_MARKER)
-            for offset in iter_find_needle(fh, cls.EOF_SHELLCODE_MARKER, start_offset=0, max_offset=maxrange)
-        ]
-        logger.debug(f"Found nonce offset candidates: {nonce_offsets}")
-        logger.debug(f"Found eof_shellcode offset candidates: {eof_shellcode_offsets}")
+        fh.seek(nonce_offset)
+        nonce = fh.read(4)
+        encoded_size = fh.read(4)
+        _real_size = _xor_bytes(nonce, encoded_size)
+        fh.seek(0, io.SEEK_END)
+        file_end = fh.tell()
+        range_size = file_end - (nonce_offset + 8)
+        return cls(RangeStream(fh, offset=nonce_offset + 8, size=range_size), nonce=nonce)
 
-        # Try the most common eof_shellcode and nonce offset candidates first
-        xf = None
-        found_nonce_offset = None
-        for offset, count in collections.Counter(eof_shellcode_offsets + nonce_offsets).most_common():
-            logger.debug(f"Found common nonce offset: {offset} ({count})")
-            found_nonce_offset = offset
-            xf = cls(fh, nonce_offset=found_nonce_offset)
-            if pe.find_mz_offset(cast("BinaryIO", xf)) is not None:
-                xf.seek(0)
-                return xf
-        raise ValueError(f"MZ header not found for: {fh}")
+    def readable(self) -> bool:
+        return True
 
-    @classmethod
-    def from_path(cls, path: Union[str, PathLike], maxrange: int = 1024) -> "XorEncodedFile":
-        """Constructs a :class:`XorEncodedFile` from path `path`.
+    def seekable(self) -> bool:
+        return self._fp.seekable()
 
-        This is more of a convenience method as it calls :meth:`XorEncodedFile.from_file` under the hood.
+    def tell(self) -> int:
+        return self._fp.tell() - self._base
 
-        Args:
-            path: path or path-like to xorencoded file
-            maxrange: how far into the file should be try to find the `nonce_offset` candidates (default 1024)
+    def readinto(self, b) -> int:
+        mv = memoryview(b)
+        raw = self._fp.read(len(mv))
+        if not raw:
+            return 0
+        combined = self._prev + raw
+        out = _xor_bytes(combined[4:], combined[:-4])
+        self._prev = combined[-4:]
+        mv[: len(out)] = out
+        return len(out)
 
-        Returns:
-            XorEncodedFile instance
-
-        Raises:
-            ValueError:  If it cannot find a `nonce_offset` or valid `MZ header`
-        """
-        fobj = open(path, "rb")
-        return cls.from_file(fobj, maxrange=maxrange)
-
-    def read_nonce(self):
-        """Return nonce for current file position or 0 if it cannot be read"""
-        pos = self.fh.tell()
-        try:
-            self.fh.seek(-4, io.SEEK_CUR)
-            nonce = self.fh.read(4)
-        except OSError:
-            nonce = b"\x00\x00\x00\x00"
-        if pos < self.nonce_offset + 12:
-            # Exclude "encoded filesize" as nonce:
-            # | nonce | encoded filesize | encoded MZ | encoded .. |
-            offset = pos - (self.nonce_offset + 8)
-            nonce = self.initial_nonce[offset:] + nonce[4 - offset :]
-        return nonce
-
-    def tell(self):
-        return self.fh.tell() - (self.nonce_offset + 8)
-
-    def seek(self, offset, whence=io.SEEK_SET):
+    def seek(self, offset: int, whence: int = io.SEEK_SET) -> int:
+        if not self.seekable():
+            raise io.UnsupportedOperation("seek")
         if whence == io.SEEK_SET:
-            return self.fh.seek(offset + self.nonce_offset + 8, whence)
-        return self.fh.seek(offset, whence)
+            p = offset
+        elif whence == io.SEEK_CUR:
+            p = self.tell() + offset
+        elif whence == io.SEEK_END:
+            p = (self._fp.seek(0, io.SEEK_END) - self._base) + offset
+        else:
+            raise ValueError(f"invalid whence: {whence}")
+        if p < 0:
+            raise OSError("negative seek position")
+        n = len(self._nonce)
+        start = max(0, p - n)
+        self._fp.seek(self._base + start)
+        window = self._fp.read(p - start)
+        if p < n:
+            window = self._nonce[p:] + window  # straddles nonce boundary
+        self._prev = window
+        self._fp.seek(self._base + p)
+        return p
 
-    def read(self, n=-1):
-        data = b""
-        nonce = self.read_nonce()
-        while True:
-            chunk = self.fh.read(4)
-            if not chunk:
-                break
-            # log.debug(f"{chunk}, {nonce}")
-            data += xor(chunk, nonce)
-            nonce = chunk
-            if n > 0 and len(data) >= n:
-                break
-        if n == -1:
-            n = None
-        return data[:n]
+    def close(self) -> None:
+        if not self.closed and self._fp is not None:
+            self._fp.close()
+        super().close()
 
 
 @catch_sigpipe
@@ -216,7 +199,7 @@ def main():
     level = levels[min(len(levels) - 1, args.verbose)]
     logging.basicConfig(level=level)
 
-    from .pe import (
+    from dissect.cobaltstrike.pe import (
         find_architecture,
         find_compile_stamps,
         find_magic_mz,
@@ -233,7 +216,7 @@ def main():
 
     with contextlib.closing(fin):
         if args.nonce_offset is not None:
-            fxor = XorEncodedFile(fin, nonce_offset=args.nonce_offset)
+            fxor = XorEncodedFile.from_file(fin, nonce_offset=args.nonce_offset)
         else:
             fxor = XorEncodedFile.from_file(fin)
             if not fxor:

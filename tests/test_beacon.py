@@ -61,9 +61,9 @@ def test_beacon_custom_xorkey(beacon_custom_xorkey_file):
     # Read the beacon into memory to speed things up
     fh = io.BytesIO(beacon_custom_xorkey_file.read())
 
-    # Try default xor keys.
+    # Try default single byte xor keys. (but disable all_xor_keys)
     with pytest.raises(ValueError, match="No valid Beacon configuration found"):
-        beacon.BeaconConfig.from_file(fh)
+        beacon.BeaconConfig.from_file(fh, all_xor_keys=False)
 
     # Try all xorkeys (but with invalid one)
     with patch("dissect.cobaltstrike.beacon.make_byte_list", return_value=[b"\xaa"]):

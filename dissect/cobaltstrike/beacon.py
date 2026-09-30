@@ -10,16 +10,16 @@ import hashlib
 import io
 import ipaddress
 import logging
+import struct
 import sys
 import time
 from collections import OrderedDict
+from dataclasses import dataclass, field
+from enum import IntEnum
+from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from os import PathLike
-
 from typing import (
+    TYPE_CHECKING,
     Any,
     BinaryIO,
     Callable,
@@ -30,17 +30,20 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    cast,
 )
 
 from dissect import cstruct
 from dissect.cobaltstrike import pe
 from dissect.cobaltstrike.guardrails import GuardrailMetadata, iter_guardrail_configs_with_beacon
+from dissect.cobaltstrike.obfuscate import ObfuscatedBeacon, StageObfuscateSettings
+from dissect.cobaltstrike.stage import get_beacon_stages
 from dissect.cobaltstrike.utils import (
     catch_sigpipe,
     grouper,
     iter_find_needle,
+    iter_repeating_xor_key_candidates,
     p8,
+    retain_file_offset,
     u16be,
     u32,
     u32be,
@@ -48,6 +51,9 @@ from dissect.cobaltstrike.utils import (
 )
 from dissect.cobaltstrike.version import BeaconVersion
 from dissect.cobaltstrike.xordecode import XorEncodedFile
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +109,8 @@ enum BeaconSetting: uint16 {
     SETTING_PROXY_BEHAVIOR = 35,
 
     // CobaltStrike version >= 3.8 (23 May 2017)
-    // DEPRECATED_SETTING_INJECT_OPTIONS = 36,
-
-    // Renamed from DEPRECATED_SETTING_INJECT_OPTIONS in CobaltStrike 4.5
-    SETTING_WATERMARKHASH = 36,
+    SETTING_INJECT_OPTIONS = 36,    // Deprecated in Cobalt Strike 4.5
+    SETTING_WATERMARKHASH = 36,     // Introduced in Cobalt Strike 4.5
 
     // CobaltStrike version >= 3.9  (Sept 26, 2017)
     SETTING_WATERMARK = 37,
@@ -173,16 +177,38 @@ enum BeaconSetting: uint16 {
     SETTING_MASKED_WATERMARK = 74,
 
     // CobaltStrike version >= 4.9 (Sep 19, 2023)
+    SETTING_HOST_PROFILE = 75,
     SETTING_DATA_STORE_SIZE = 76,
 
     // CobaltStrike version >= 4.10 (Jul 16, 2024)
     SETTING_HTTP_DATA_REQUIRED = 77,
     SETTING_BEACON_GATE = 78,
+
+    // Cobalt Strike >= 4.11 (Mar 17, 2025)
+    SETTING_C2_CHUNK_POST_PACKET_SIZE = 79,
+    SETTING_C2_CHUNK_POST_POST_SIZE = 80,
+
+    SETTING_DNS_DOH_ENABLED = 81,
+    SETTING_DNS_DOH_VERB = 82,
+    SETTING_DNS_DOH_USERAGENT = 83,
+    SETTING_DNS_DOH_PROXY_SERVER = 84,
+    SETTING_DNS_DOH_SERVERS = 85,
+    SETTING_DNS_DOH_ACCEPT = 86,
+    SETTING_DNS_DOH_HEADERS = 87,
+
+    // Cobalt Strike >= 4.12 (Nov 24, 2025)
+    SETTING_PROCINJ_DRIP_LOAD = 88,
+    SETTING_PROCINJ_DRIP_LOAD_DELAY = 89,
+
+    // Cobalt Strike >= 4.13 (June 10, 2026)
+    SETTING_CHECKIN_DELAY = 91,
 };
 
 enum DeprecatedBeaconSetting: uint16 {
     SETTING_KILLDATE_YEAR = 16,
+    SETTING_KILLDATE_MONTH = 17,
     SETTING_INJECT_OPTIONS = 36,
+    SETTING_PROCINJ_ALLOWED = 48,
 };
 
 enum TransformStep: uint32 {
@@ -245,6 +271,8 @@ enum InjectAllocator: uint8 {
     NtMapViewOfSection = 1,
 };
 
+
+// https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/malleable-c2-extend_process-injection.htm
 enum InjectExecutor: uint8 {
     CreateThread = 1,
     SetThreadContext = 2,
@@ -253,7 +281,12 @@ enum InjectExecutor: uint8 {
     NtQueueApcThread = 5,
     CreateThread_ = 6,
     CreateRemoteThread_ = 7,
-    NtQueueApcThread_s = 8
+    NtQueueApcThread_s = 8,
+    // Cobalt Strike >= 4.11 (May 12, 2025)
+    // - https://www.cobaltstrike.com/blog/cobalt-strike-411-shh-beacon-is-sleeping
+    // - https://whiteknightlabs.com/2025/05/19/harnessing-the-power-of-cobalt-strike-profiles-for-edr-evasion-part-2/
+    ObfSetThreadContext = 9,
+    ObfSetThreadContext_ = 10,
 };
 
 enum BofAllocator: uint16 {
@@ -306,99 +339,347 @@ InjectExecutor = cs_struct.InjectExecutor
 BofAllocator = cs_struct.BofAllocator
 BeaconGateOptions = cs_struct.BeaconGateOptions
 
+TYPE_INT = SettingsType.TYPE_INT
+TYPE_SHORT = SettingsType.TYPE_SHORT
+TYPE_PTR = SettingsType.TYPE_PTR
+# lookup: STOCK_TYPE[BeaconSetting(index)]  (reused names: A & B == index)
+
+STOCK_TYPE = {
+    BeaconSetting.SETTING_PROTOCOL: {TYPE_SHORT},  # idx=1 n=189687 TYPE_SHORT=189687
+    BeaconSetting.SETTING_PORT: {TYPE_SHORT},  # idx=2 n=189692 TYPE_SHORT=189692
+    BeaconSetting.SETTING_SLEEPTIME: {TYPE_INT},  # idx=3 n=189695 TYPE_INT=189695
+    BeaconSetting.SETTING_MAXGET: {TYPE_INT},  # idx=4 n=189693 TYPE_INT=189693
+    BeaconSetting.SETTING_JITTER: {TYPE_SHORT},  # idx=5 n=189694 TYPE_SHORT=189694
+    BeaconSetting.SETTING_MAXDNS: {TYPE_SHORT},  # idx=6 n=103847 TYPE_SHORT=103847
+    BeaconSetting.SETTING_PUBKEY: {TYPE_PTR},  # idx=7 n=189694 TYPE_PTR=189694
+    BeaconSetting.SETTING_DOMAINS: {TYPE_PTR},  # idx=8 n=189694 TYPE_PTR=189694
+    BeaconSetting.SETTING_USERAGENT: {TYPE_PTR},  # idx=9 n=177848 TYPE_PTR=177848
+    BeaconSetting.SETTING_SUBMITURI: {TYPE_PTR},  # idx=10 n=177848 TYPE_PTR=177848
+    BeaconSetting.SETTING_C2_RECOVER: {TYPE_PTR},  # idx=11 n=177848 TYPE_PTR=177848
+    BeaconSetting.SETTING_C2_REQUEST: {TYPE_PTR},  # idx=12 n=177848 TYPE_PTR=177848
+    BeaconSetting.SETTING_C2_POSTREQ: {TYPE_PTR},  # idx=13 n=177842 TYPE_PTR=177842
+    BeaconSetting.SETTING_SPAWNTO: {TYPE_SHORT, TYPE_PTR},  # idx=14 n=167524 TYPE_SHORT=82, TYPE_PTR=167442
+    BeaconSetting.SETTING_PIPENAME: {TYPE_PTR},  # idx=15 n=92003 TYPE_PTR=92003
+    BeaconSetting.SETTING_BOF_ALLOCATOR & DeprecatedBeaconSetting.SETTING_KILLDATE_YEAR: {
+        TYPE_SHORT
+    },  # idx=16 n=39661 TYPE_SHORT=39661; also DeprecatedBeaconSetting.SETTING_KILLDATE_YEAR
+    BeaconSetting.SETTING_SYSCALL_METHOD & DeprecatedBeaconSetting.SETTING_KILLDATE_MONTH: {
+        TYPE_SHORT,
+        TYPE_INT,
+    },  # idx=17 n=29531 TYPE_SHORT=10107, TYPE_INT=19424; also DeprecatedBeaconSetting.SETTING_KILLDATE_MONTH
+    BeaconSetting.SETTING_KILLDATE_DAY: {TYPE_SHORT},  # idx=18 n=10107 TYPE_SHORT=10107
+    BeaconSetting.SETTING_DNS_IDLE: {TYPE_INT},  # idx=19 n=103844 TYPE_INT=103844
+    BeaconSetting.SETTING_DNS_SLEEP: {TYPE_INT},  # idx=20 n=103844 TYPE_INT=103844
+    BeaconSetting.SETTING_C2_VERB_GET: {TYPE_PTR},  # idx=26 n=189289 TYPE_PTR=189289
+    BeaconSetting.SETTING_C2_VERB_POST: {TYPE_PTR},  # idx=27 n=189290 TYPE_PTR=189290
+    BeaconSetting.SETTING_C2_CHUNK_POST: {TYPE_INT},  # idx=28 n=189288 TYPE_INT=189288
+    BeaconSetting.SETTING_SPAWNTO_X86: {TYPE_PTR},  # idx=29 n=189289 TYPE_PTR=189289
+    BeaconSetting.SETTING_SPAWNTO_X64: {TYPE_PTR},  # idx=30 n=189288 TYPE_PTR=189288
+    BeaconSetting.SETTING_CRYPTO_SCHEME: {TYPE_SHORT},  # idx=31 n=189207 TYPE_SHORT=189207
+    BeaconSetting.SETTING_PROXY_CONFIG: {TYPE_PTR},  # idx=32 n=589 TYPE_PTR=589
+    BeaconSetting.SETTING_PROXY_USER: {TYPE_PTR},  # idx=33 n=136 TYPE_PTR=136
+    BeaconSetting.SETTING_PROXY_PASSWORD: {TYPE_PTR},  # idx=34 n=136 TYPE_PTR=136
+    BeaconSetting.SETTING_PROXY_BEHAVIOR: {TYPE_SHORT},  # idx=35 n=188454 TYPE_SHORT=188454
+    BeaconSetting.SETTING_WATERMARKHASH & DeprecatedBeaconSetting.SETTING_INJECT_OPTIONS: {
+        TYPE_SHORT,
+        TYPE_PTR,
+    },  # idx=36 n=48560 TYPE_SHORT=8623, TYPE_PTR=39937; also DeprecatedBeaconSetting.SETTING_INJECT_OPTIONS
+    BeaconSetting.SETTING_WATERMARK: {TYPE_INT},  # idx=37 n=184359 TYPE_INT=184359
+    BeaconSetting.SETTING_CLEANUP: {TYPE_SHORT},  # idx=38 n=183663 TYPE_SHORT=183663
+    BeaconSetting.SETTING_CFG_CAUTION: {TYPE_SHORT},  # idx=39 n=182754 TYPE_SHORT=182754
+    BeaconSetting.SETTING_KILLDATE: {TYPE_INT},  # idx=40 n=179566 TYPE_INT=179566
+    BeaconSetting.SETTING_GARGLE_NOOK: {TYPE_INT},  # idx=41 n=179572 TYPE_INT=179572
+    BeaconSetting.SETTING_GARGLE_SECTIONS: {TYPE_PTR},  # idx=42 n=63910 TYPE_PTR=63910
+    BeaconSetting.SETTING_PROCINJ_PERMS_I: {TYPE_SHORT},  # idx=43 n=179573 TYPE_SHORT=179573
+    BeaconSetting.SETTING_PROCINJ_PERMS: {TYPE_SHORT},  # idx=44 n=179574 TYPE_SHORT=179574
+    BeaconSetting.SETTING_PROCINJ_MINALLOC: {TYPE_INT},  # idx=45 n=179573 TYPE_INT=179573
+    BeaconSetting.SETTING_PROCINJ_TRANSFORM_X86: {TYPE_PTR},  # idx=46 n=179574 TYPE_PTR=179574
+    BeaconSetting.SETTING_PROCINJ_TRANSFORM_X64: {TYPE_PTR},  # idx=47 n=179572 TYPE_PTR=179572
+    BeaconSetting.SETTING_PROCINJ_BOF_REUSE_MEM & DeprecatedBeaconSetting.SETTING_PROCINJ_ALLOWED: {
+        TYPE_SHORT
+    },  # idx=48 n=42014 TYPE_SHORT=42014; also DeprecatedBeaconSetting.SETTING_PROCINJ_ALLOWED
+    BeaconSetting.SETTING_HTTP_NO_COOKIES: {TYPE_SHORT},  # idx=50 n=167112 TYPE_SHORT=167112
+    BeaconSetting.SETTING_PROCINJ_EXECUTE: {TYPE_PTR},  # idx=51 n=167111 TYPE_PTR=167111
+    BeaconSetting.SETTING_PROCINJ_ALLOCATOR: {TYPE_SHORT},  # idx=52 n=167113 TYPE_SHORT=167113
+    BeaconSetting.SETTING_PROCINJ_STUB: {TYPE_PTR},  # idx=53 n=166965 TYPE_PTR=166965
+    BeaconSetting.SETTING_HOST_HEADER: {TYPE_PTR},  # idx=54 n=153069 TYPE_PTR=153069
+    BeaconSetting.SETTING_EXIT_FUNK: {TYPE_SHORT},  # idx=55 n=153062 TYPE_SHORT=153062
+    BeaconSetting.SETTING_SMB_FRAME_HEADER: {TYPE_PTR},  # idx=57 n=117702 TYPE_PTR=117702
+    BeaconSetting.SETTING_TCP_FRAME_HEADER: {TYPE_PTR},  # idx=58 n=117701 TYPE_PTR=117701
+    BeaconSetting.SETTING_HEADERS_REMOVE: {TYPE_PTR},  # idx=59 n=27 TYPE_PTR=27
+    BeaconSetting.SETTING_DNS_BEACON_BEACON: {TYPE_PTR},  # idx=60 n=10839 TYPE_PTR=10839
+    BeaconSetting.SETTING_DNS_BEACON_GET_A: {TYPE_PTR},  # idx=61 n=10838 TYPE_PTR=10838
+    BeaconSetting.SETTING_DNS_BEACON_GET_AAAA: {TYPE_PTR},  # idx=62 n=10840 TYPE_PTR=10840
+    BeaconSetting.SETTING_DNS_BEACON_GET_TXT: {TYPE_PTR},  # idx=63 n=10839 TYPE_PTR=10839
+    BeaconSetting.SETTING_DNS_BEACON_PUT_METADATA: {TYPE_PTR},  # idx=64 n=10839 TYPE_PTR=10839
+    BeaconSetting.SETTING_DNS_BEACON_PUT_OUTPUT: {TYPE_PTR},  # idx=65 n=10840 TYPE_PTR=10840
+    BeaconSetting.SETTING_DNSRESOLVER: {TYPE_PTR},  # idx=66 n=10839 TYPE_PTR=10839
+    BeaconSetting.SETTING_DOMAIN_STRATEGY: {TYPE_SHORT},  # idx=67 n=77599 TYPE_SHORT=77599
+    BeaconSetting.SETTING_DOMAIN_STRATEGY_SECONDS: {TYPE_INT},  # idx=68 n=77597 TYPE_INT=77597
+    BeaconSetting.SETTING_DOMAIN_STRATEGY_FAIL_X: {TYPE_INT},  # idx=69 n=77598 TYPE_INT=77598
+    BeaconSetting.SETTING_DOMAIN_STRATEGY_FAIL_SECONDS: {TYPE_INT},  # idx=70 n=77599 TYPE_INT=77599
+    BeaconSetting.SETTING_MAX_RETRY_STRATEGY_ATTEMPTS: {TYPE_INT},  # idx=71 n=40111 TYPE_INT=40111
+    BeaconSetting.SETTING_MAX_RETRY_STRATEGY_INCREASE: {
+        TYPE_SHORT,
+        TYPE_INT,
+    },  # idx=72 n=40113 TYPE_SHORT=1, TYPE_INT=40112
+    BeaconSetting.SETTING_MAX_RETRY_STRATEGY_DURATION: {TYPE_INT},  # idx=73 n=40111 TYPE_INT=40111
+    BeaconSetting.SETTING_MASKED_WATERMARK: {TYPE_PTR},  # idx=74 n=29554 TYPE_PTR=29554
+    BeaconSetting.SETTING_HOST_PROFILE: {TYPE_PTR},  # idx=75 n=6 TYPE_PTR=6
+    BeaconSetting.SETTING_DATA_STORE_SIZE: {TYPE_INT},  # idx=76 n=12046 TYPE_INT=12046
+    BeaconSetting.SETTING_HTTP_DATA_REQUIRED: {TYPE_SHORT},  # idx=77 n=54 TYPE_SHORT=54
+    BeaconSetting.SETTING_BEACON_GATE: {TYPE_PTR},  # idx=78 n=3085 TYPE_PTR=3085
+    BeaconSetting.SETTING_C2_CHUNK_POST_PACKET_SIZE: {TYPE_INT},  # idx=79 n=2078 TYPE_INT=2078
+    BeaconSetting.SETTING_C2_CHUNK_POST_POST_SIZE: {TYPE_INT},  # idx=80 n=2079 TYPE_INT=2079
+    BeaconSetting.SETTING_DNS_DOH_ENABLED: {TYPE_SHORT},  # idx=81 n=135 TYPE_SHORT=135
+    BeaconSetting.SETTING_DNS_DOH_VERB: {TYPE_SHORT},  # idx=82 n=96 TYPE_SHORT=96
+    BeaconSetting.SETTING_DNS_DOH_USERAGENT: {TYPE_PTR},  # idx=83 n=135 TYPE_PTR=135
+    BeaconSetting.SETTING_DNS_DOH_PROXY_SERVER: {TYPE_PTR},  # idx=84 n=3 TYPE_PTR=3
+    BeaconSetting.SETTING_DNS_DOH_SERVERS: {TYPE_PTR},  # idx=85 n=135 TYPE_PTR=135
+    BeaconSetting.SETTING_DNS_DOH_ACCEPT: {TYPE_PTR},  # idx=86 n=135 TYPE_PTR=135
+    BeaconSetting.SETTING_DNS_DOH_HEADERS: {TYPE_PTR},  # idx=87 n=135 TYPE_PTR=135
+    BeaconSetting.SETTING_PROCINJ_DRIP_LOAD: {TYPE_SHORT},  # idx=88 n=814 TYPE_SHORT=814
+    BeaconSetting.SETTING_PROCINJ_DRIP_LOAD_DELAY: {TYPE_INT},  # idx=89 n=816 TYPE_INT=816
+    BeaconSetting.SETTING_CHECKIN_DELAY: {TYPE_INT},  # idx=91 n=122 TYPE_INT=122
+}
+"""Mapping of stock beacon settings to their expected type. Can be used for validation."""
+
 DEFAULT_XOR_KEYS: List[bytes] = [b"\x69", b"\x2e", b"\x00"]
 """ Default XOR keys used by Cobalt Strike for obfuscating Beacon config bytes """
 
+ASN1_RSA_ENCRYPTION = bytes.fromhex("06092A864886F70D010101")
+""" rsaEncryption OID (1.2.840.113549.1.1.1) embedded in SETTING_PUBKEY """
 
-def find_beacon_config_bytes(fh: BinaryIO, xorkey: bytes) -> Iterator[bytes]:
+_DER_SEQ_PREFIXES = (b"\x30\x81", b"\x30\x82")
+""" DER SEQUENCE prefixes for SETTING_PUBKEY (SubjectPublicKeyInfo) """
+
+
+@dataclass
+class BeaconConfigBlock:
+    """Class for holding Beacon configuration block data"""
+
+    data: bytes
+    """Raw (deobfuscated) bytes of the Beacon configuration block (PATCH_SIZE_V2 bytes)"""
+    xorkey: bytes
+    """XOR key used to deobfuscate the Beacon configuration block"""
+
+
+@dataclass
+class BeaconModifications:
+    """Class for tracking modifications made to a Beacon configuration block"""
+
+    tags: list[str] = field(default_factory=list)
+    """List of tags associated with the Beacon config block (e.g., "remapped_types", "remapped_indexes")"""
+    remapped_types: dict[int, int] = field(default_factory=dict)
+    """Mapping of remapped setting types (type -> correct type) for the Beacon config block"""
+    remapped_indexes: dict[int, int] = field(default_factory=dict)
+    """Mapping of remapped setting indexes (index -> correct index) for the Beacon config block"""
+
+
+Normalizer = Callable[
+    [BeaconConfigBlock, BeaconModifications],
+    tuple[BeaconConfigBlock, BeaconModifications],
+]
+
+
+def rotate_key(key: bytes, phase: int) -> bytes:
+    n = len(key)
+    phase %= n
+    return key[phase:] + key[:phase]
+
+
+class BeaconPatchSize(IntEnum):
+    V1 = 0x1000  # Until Cobalt Strike 4.8, the beacon config was padded to 0x1000 bytes
+    V2 = 0x1800  # Since Cobalt Strike 4.9, the beacon config is padded to 0x1800 bytes
+
+
+PATCH_SIZE = max(BeaconPatchSize)
+
+# Common SETTING lengths. Used only as a tie-breaker when ranking candidate configs. Not a strict validation.
+_TYPICAL_SETTING_LENGTHS = frozenset({2, 4, 16, 32, 64, 128, 0x80, 0x100, 0x200, 0x400})
+
+
+def _parse_setting_header(buf: bytes | memoryview, offset: int) -> Optional[Tuple[int, int, int]]:
+    """Parse a big-endian ``(index, type, length)`` header at ``offset``, or ``None`` if truncated."""
+    if offset + 6 > len(buf):
+        return None
+    return struct.unpack(">HHH", buf[offset : offset + 6])
+
+
+def _looks_like_pubkey(body: bytes) -> bool:
+    return body.startswith(_DER_SEQ_PREFIXES) or ASN1_RSA_ENCRYPTION in body
+
+
+def _looks_like_domains(body: bytes) -> bool:
+    host, sep, _rest = body.partition(b",")
+    return bool(sep) and b"." in host
+
+
+def walk_settings(
+    buf: bytes | memoryview,
+    max_length: int = 1024,
+    packed: bool = True,
+) -> list[int]:
+    """Walk packed TLV settings in ``buf`` and return header offsets.
+
+    Discovery treats a setting as an opaque ``uint16be index | type | length | value``.
+    Index and type are **not** required to be stock ``BeaconSetting`` / ``SettingsType`` values.
+    ``index == 0`` terminates the walk (end-of-config sentinel).
+    """
+    recs: list[int] = []
+    i = 0
+    n = len(buf)
+
+    while i + 6 <= n:
+        header = _parse_setting_header(buf, i)
+        if header is None:
+            break
+        idx, _typ, ln = header
+        if idx == 0:
+            break
+        if ln > max_length or i + 6 + ln > n:
+            if packed:
+                break
+            i += 1
+            continue
+        recs.append(i)
+        i += 6 + ln
+
+    return recs
+
+
+def setting_score(decoded: bytes | memoryview, recs: list[int]) -> tuple:
+    """Rank a candidate config start using payload content, not enum values."""
+    ids = []
+    has_pubkey = has_domains = False
+    typical = 0
+    types = set()
+    for off in recs:
+        header = _parse_setting_header(decoded, off)
+        if header is None:
+            continue
+        idx, _typ, ln = header
+        types.add(_typ)
+        ids.append(idx)
+        body = decoded[off + 6 : off + 6 + min(ln, 256)]
+        if isinstance(body, memoryview):
+            body = body.tobytes()
+        if _looks_like_pubkey(body):
+            has_pubkey = True
+        if _looks_like_domains(body):
+            has_domains = True
+        if ln in _TYPICAL_SETTING_LENGTHS:
+            typical += 1
+
+    unique = len(set(ids))
+    known_indexes = sum(1 for idx in ids if idx in BeaconSetting)
+    has_distinct_types = len(types) == 3
+    return (
+        int(has_pubkey) + int(has_domains) + int(has_distinct_types),
+        known_indexes,
+        unique,
+        typical,
+        len(recs),
+    )
+
+
+def find_beacon_config_bytes(fh: BinaryIO, xorkey: bytes) -> Iterator[BeaconConfigBlock]:
     r"""Find and yield (possible) Cobalt Strike configuration bytes from file `fh` using `xorkey` (eg: b"\x69").
 
-    This is done by scraping the file `fh` for XOR encoded configuration blocks.
-    A beacon configuration block always (unless modified) starts with::
-
-       Setting(index=SETTING_PROTOCOL, type=TYPE_SHORT, length=0x2)
-
-       # which translates to the following bytes
-       b"\x00\x01\x00\x01\x00\x02\x00"
-
-    These bytes are used in conjunction with the XOR key for finding the (potential) start of a configuration block.
+    Discovery is payload-first: XOR-search for the RSA encryption OID embedded in
+    ``SETTING_PUBKEY``, locate the covering TLV whose body contains that OID, then
+    walk packed settings backward to recover the configuration start. Setting index
+    and type values are treated as opaque; they are not required to match stock
+    ``BeaconSetting`` / ``SettingsType`` enums.
 
     Args:
         fh: file object
         xorkey: XOR key (as bytes)
 
     Yields:
-        Beacon configuration bytes (4096 bytes), in deobfuscated (un-XOR'd) form.
+        Beacon configuration bytes (``PATCH_SIZE`` bytes), in deobfuscated (un-XOR'd) form.
     """
+    klen = len(xorkey)
+    if klen == 0:
+        return
 
-    # This is the maximum size for the beacon config and is also padded as such
-    PATCH_SIZE = 4096
-    # This is the default Beacon config starting bytes (unless it's modified)
-    CONFIG_HEADER = b"\x00\x01\x00\x01\x00\x02\x00"
-    xorred_config_block = xor(CONFIG_HEADER, xorkey)
+    for phase in range(klen):
+        needle = xor(ASN1_RSA_ENCRYPTION, rotate_key(xorkey, phase))
+        for pos in iter_find_needle(fh, needle, start_offset=0):
+            logger.debug("ASN1_RSA_ENCRYPTION key=%r phase=%s @ 0x%x", xorkey, phase, pos)
 
-    for pos in iter_find_needle(fh, xorred_config_block, start_offset=0):
-        fh.seek(pos)
-        data = fh.read(PATCH_SIZE)
-        logger.debug(f"Found CONFIG_HEADER using xorkey: 0x{xorkey.hex()}")
-        yield xor(data, xorkey)
+            back_start = max(0, pos - PATCH_SIZE)
+            fh.seek(back_start)
+            back_data = fh.read(PATCH_SIZE * 3)
+            phase_back = (phase + back_start - pos) % klen
+            decoded_back = xor(back_data, rotate_key(xorkey, phase_back))
+            decoded_view = memoryview(decoded_back)
+
+            best = None
+            for start in range(len(decoded_back)):
+                recs = walk_settings(decoded_view[start:], packed=True)
+                if len(recs) < 3:
+                    continue
+                score = setting_score(decoded_view[start:], recs)
+                real_start = back_start + start
+                if score[0] == 0:
+                    continue
+
+                logger.debug(
+                    "config start 0x%x (relative: 0x%x) score=%r recs=%d",
+                    real_start,
+                    start,
+                    score,
+                    len(recs),
+                )
+
+                # Prefer payload evidence, then uniqueness; earlier start only as a tie-break.
+                cand = (score, -real_start, decoded_view[start : start + PATCH_SIZE].tobytes())
+                if best is None or cand > best:
+                    best = cand
+
+            if best is None:
+                continue
+
+            score, neg_real_start, decoded = best
+            real_start = -neg_real_start
+            phase_cfg = (phase + real_start - pos) % klen
+            logger.debug("Found config start 0x%x score=%s", real_start, score)
+            key = rotate_key(xorkey, phase_cfg)
+            logger.debug("Found BeaconConfig using xorkey: %r (0x%x)", key, int.from_bytes(key, "big"))
+            yield BeaconConfigBlock(data=decoded, xorkey=key)
 
 
-def iter_beacon_config_blocks(
-    fobj: BinaryIO, xor_keys=None, xordecode=True, all_xor_keys=False
-) -> Iterator[Tuple[bytes, dict]]:
-    """Yield tuple with found Beacon `config_block_bytes` from file `fobj` and `extra_info` dict
+def iter_beacon_config_blocks(fobj: BinaryIO, xor_keys=None, all_xor_keys=False) -> Iterator[BeaconConfigBlock]:
+    """Yield found Beacon `config_block_bytes` from file `fobj` as `BeaconConfigBlock` instances.
 
     It always start seeking from the beginning of `fobj`. Side effects: file handle position due to seeking
 
-    The `extra_info` dictionary holds some metadata such as if the `fobj` was xorencoded and which xorkey was used.
-
     Args:
         xor_keys: list XOR keys (as bytes), defaults to: :attr:`DEFAULT_XOR_KEYS` if not specified.
-        xordecode: If ``True`` it will also try to `XorDecode` the file object.
         all_xor_keys: Try ALL single-byte XOR keys if no beacon config is found using the default keys.
 
     Yields:
-        Tuple as ``(config_block_bytes, extra_info_dict)``
-        -- `extra_info` dict contains: ``{"xorkey": bytes, "xorencoded": bool}``
+        BeaconConfigBlock instances containing the found `config_block_bytes` and associated `xorkey`.
     """
     found = False
     xor_keys = xor_keys or DEFAULT_XOR_KEYS
     logger.debug(f"xor_keys: {xor_keys!r}")
 
-    # Try XorEncoded files first as they are more common
-    if not found and xordecode:
-        try:
-            fxor = cast("BinaryIO", XorEncodedFile.from_file(fobj))
-            for xorkey in xor_keys:
-                for config_block in find_beacon_config_bytes(fxor, xorkey):
-                    found = True
-                    yield config_block, {"xorkey": xorkey, "xorencoded": True}
-        except ValueError:
-            pass
-
-    # Try finding config block without XorEncoding
-    if not found:
-        for xorkey in xor_keys:
-            for config_block in find_beacon_config_bytes(fobj, xorkey):
-                found = True
-                yield config_block, {"xorkey": xorkey, "xorencoded": False}
+    for xorkey in xor_keys:
+        for config_block in find_beacon_config_bytes(fobj, xorkey):
+            found = True
+            yield config_block
 
     # Retry with left over xor keys if specified
     if not found and all_xor_keys:
         logger.debug("config_block not found, trying all xor keys...")
-        if xordecode:
-            try:
-                fxor = XorEncodedFile.from_file(fobj)
-            except ValueError:
-                fxor = fobj
-
         # Determine left over xor keys
         left_xor_keys = make_byte_list(exclude=xor_keys)
 
         # Determine most common bytes in the (xordecoded) file
         bytes_counter = collections.Counter()
-        for chunk in iter(functools.partial(fxor.read, io.DEFAULT_BUFFER_SIZE), b""):
+        for chunk in iter(functools.partial(fobj.read, io.DEFAULT_BUFFER_SIZE), b""):
             fourgrams = grouper(chunk, n=4, fillvalue=0)
             bytes_counter.update(gram[0] for gram in fourgrams if gram[0] == gram[1] == gram[2] == gram[3])
         most_common_bytes = [p8(x[0]) for x in bytes_counter.most_common()]
@@ -407,7 +688,7 @@ def iter_beacon_config_blocks(
         left_xor_keys.sort(key=lambda x: most_common_bytes.index(x) if x in most_common_bytes else 256)
 
         logger.debug(f"left xor keys to try: {left_xor_keys}")
-        yield from iter_beacon_config_blocks(fobj, left_xor_keys, xordecode=xordecode, all_xor_keys=False)
+        yield from iter_beacon_config_blocks(fobj, left_xor_keys, all_xor_keys=False)
 
 
 def make_byte_list(exclude: List[bytes] = None) -> List[bytes]:
@@ -415,7 +696,7 @@ def make_byte_list(exclude: List[bytes] = None) -> List[bytes]:
     return sorted({p8(x) for x in range(256)} - set(exclude or []))
 
 
-def iter_settings(fobj: Union[bytes, BinaryIO]) -> Iterator["Setting"]:
+def iter_settings(fobj: Union[bytes, BinaryIO], max_enum: int = 0) -> Iterator["Setting"]:
     """Returns an iterator yielding :class:`Setting` objects by reading data from `fobj`
 
     The file position will be at the end of the Beacon config after parsing is done.
@@ -428,6 +709,7 @@ def iter_settings(fobj: Union[bytes, BinaryIO]) -> Iterator["Setting"]:
 
     Args:
         fobj: bytes or file-like object with Beacon configuration data
+        max_enum: maximum BeaconSetting index seen so far, used to handle deprecated settings
 
     Yields:
         :class:`Setting` objects
@@ -445,9 +727,10 @@ def iter_settings(fobj: Union[bytes, BinaryIO]) -> Iterator["Setting"]:
             setting = Setting(fobj)
         except EOFError:
             break
+        max_enum = max(max_enum, setting.index)
         if setting.index == BeaconSetting.SETTING_USERAGENT:
-            # Handle cases where User-Agent is too long in some configs
-            # eg: fcece52fd030ca66043ae29af2116a79
+            # Handle cases where User-Agent is too long in some configs, eg:
+            # - fcece52fd030ca66043ae29af2116a79
             if setting.length == 0x80:
                 if len(setting.value.rstrip(b"\x00")) >= 0x80:
                     while True:
@@ -456,11 +739,49 @@ def iter_settings(fobj: Union[bytes, BinaryIO]) -> Iterator["Setting"]:
                             fobj.seek(-1, io.SEEK_CUR)
                             break
                         setting.value += x
-        elif setting.index == BeaconSetting.SETTING_WATERMARKHASH:
-            # Handle deprecated setting INJECT_OPTIONS -> WATERMARKHASH
-            # We can identify the difference using TYPE_SHORT vs TYPE_PTR.
-            if setting.type == SettingsType.TYPE_SHORT:
-                setting.index = DeprecatedBeaconSetting.SETTING_INJECT_OPTIONS
+        elif setting.index in (BeaconSetting.SETTING_C2_REQUEST, BeaconSetting.SETTING_C2_POSTREQ):
+            # Handle cases the the C2_REQUEST or C2_POSTREQ setting is too long in some configs, eg:
+            # - f2f0e82636dce9cc274fedc7a12a19dfcbada0861c6869507090913d7166ed23 (overflowed program)
+            # - e6ce038b69e2e58b1e939f00c690c5fe8b834d4215687edc79d4c7f0b8989870 (overflowed program)
+            # - 271baa4800a7d6d466a92fa77d3946f8e7376ac0116ecc72127953962662cb26 (truncated program)
+            if setting.length == 0x100:
+                # check if the length is respected and the program is truncated to the length
+                with retain_file_offset(fobj):
+                    recs = walk_settings(fobj.read(0x800))
+
+                # otherwise the program is most likely longer than the length, so we need to read until the end
+                # of the program
+                if not recs:
+                    real_size = setting.length
+                    with retain_file_offset(fobj):
+                        fobj.seek(-setting.length, io.SEEK_CUR)
+                        transform_data = fobj.read(0x800)
+                        ftransform = io.BytesIO(transform_data)
+                        x = parse_transform_binary(ftransform)
+                        real_size = ftransform.tell()
+                        transform_data = transform_data[:real_size]
+
+                    if real_size > setting.length:
+                        logger.debug(f"Adjusting {setting.index} length from {setting.length} to {real_size}")
+                        setting.value = transform_data
+                        fobj.seek(-setting.length, io.SEEK_CUR)
+                        fobj.seek(real_size, io.SEEK_CUR)
+                        setting.length = real_size
+        # Deprecated settings handling
+        elif setting.index == BeaconSetting.SETTING_WATERMARKHASH and setting.type == SettingsType.TYPE_SHORT:
+            # Handle deprecated setting INJECT_OPTIONS (SHORT) -> WATERMARKHASH (PTR)
+            setting.index = BeaconSetting.SETTING_INJECT_OPTIONS
+        elif setting.index == BeaconSetting.SETTING_SYSCALL_METHOD and setting.type == SettingsType.TYPE_SHORT:
+            # Handle deprecated setting KILLDATE_MONTH (SHORT) -> SYSCALL_METHOD (INT)
+            setting.index = BeaconSetting.SETTING_KILLDATE_MONTH
+        elif setting.index == BeaconSetting.SETTING_BOF_ALLOCATOR and max_enum < 74:
+            # Handle deprecated setting KILLDATE_YEAR (SHORT) -> BOF_ALLOCATOR (SHORT)
+            # We can identify the difference using the max_enum value.
+            setting.index = BeaconSetting.SETTING_KILLDATE_YEAR
+        elif setting.index == BeaconSetting.SETTING_PROCINJ_BOF_REUSE_MEM and max_enum < 74:
+            # Handle deprecated setting PROCINJ_ALLOWED (SHORT) -> PROCINJ_BOF_REUSE_MEM (SHORT)
+            # We can identify the difference using the max_enum value.
+            setting.index = BeaconSetting.SETTING_PROCINJ_ALLOWED
 
         yield setting
 
@@ -499,7 +820,9 @@ def parse_recover_binary(program: bytes) -> List[Tuple[str, Union[int, bool]]]:
     return rsteps
 
 
-def parse_transform_binary(program: bytes, build: str = "metadata") -> List[Tuple[str, Union[str, bytes, bool]]]:
+def parse_transform_binary(
+    program: bytes | io.BytesIO, build: str = "metadata"
+) -> List[Tuple[str, Union[str, bytes, bool]]]:
     """Parse ``SETTING_C2_{REQUEST,POSTREQ}`` (`http-{get,post}.client`) data"""
     ENABLE_STEPS = [
         TransformStep.BASE64,
@@ -522,7 +845,10 @@ def parse_transform_binary(program: bytes, build: str = "metadata") -> List[Tupl
     BUILD_MAP = {0: build, 1: "output"}
 
     tsteps: List[Tuple[str, Union[str, bytes, bool]]] = []
-    p = io.BytesIO(program)
+    if isinstance(program, bytes):
+        p = io.BytesIO(program)
+    else:
+        p = program
     while True:
         d = p.read(4)
         value = u32be(d)
@@ -542,6 +868,10 @@ def parse_transform_binary(program: bytes, build: str = "metadata") -> List[Tupl
             length = u32be(p.read(4))
             arg = p.read(length)
             tsteps.append((name, arg))
+        else:
+            logger.error("Unknown transform step {}".format(step))
+            p.seek(-4, io.SEEK_CUR)  # undo the read
+            break
     return tsteps
 
 
@@ -554,7 +884,11 @@ def parse_execute_list(data: bytes) -> List[str]:
         if not d or d == b"\x00":
             break
         inject = InjectExecutor(d)
-        if inject in (InjectExecutor.CreateThread_, InjectExecutor.CreateRemoteThread_):
+        if inject in (
+            InjectExecutor.CreateThread_,
+            InjectExecutor.CreateRemoteThread_,
+            InjectExecutor.ObfSetThreadContext_,
+        ):
             s4 = u16be(p.read(2))
             length = u32be(p.read(4))
             s2 = p.read(length).rstrip(b"\x00")
@@ -693,9 +1027,19 @@ def null_terminated_str(data: bytes) -> str:
     return null_terminated_bytes(data).decode("latin-1", "ignore")
 
 
+def spawn_to_hex(data: bytes | int) -> str:
+    """Return `data` as hex string. If `data` is an integer, it is converted to hex string with 0x prefix.
+
+    The data should be bytes, but in some modified beacons it can be an integer instead. It handles both cases.
+    """
+    if isinstance(data, int):
+        return f"0x{data:x}"
+    return data.hex()
+
+
 SETTING_TO_PRETTYFUNC: Dict[BeaconSetting, Callable] = {
     BeaconSetting.SETTING_PROCINJ_STUB: lambda x: x.hex(),
-    BeaconSetting.SETTING_SPAWNTO: lambda x: x.hex(),
+    BeaconSetting.SETTING_SPAWNTO: spawn_to_hex,
     BeaconSetting.SETTING_C2_RECOVER: parse_recover_binary,
     BeaconSetting.SETTING_C2_REQUEST: parse_transform_binary,
     BeaconSetting.SETTING_C2_POSTREQ: functools.partial(parse_transform_binary, build="id"),
@@ -728,6 +1072,11 @@ SETTING_TO_PRETTYFUNC: Dict[BeaconSetting, Callable] = {
     BeaconSetting.SETTING_MASKED_WATERMARK: lambda x: x.hex(),
     BeaconSetting.SETTING_BOF_ALLOCATOR: lambda x: BofAllocator(x).name,
     BeaconSetting.SETTING_BEACON_GATE: lambda x: beacon_gate_options_string(parse_beacon_gate(x)),
+    BeaconSetting.SETTING_DNS_DOH_USERAGENT: null_terminated_str,
+    BeaconSetting.SETTING_DNS_DOH_PROXY_SERVER: null_terminated_str,
+    BeaconSetting.SETTING_DNS_DOH_SERVERS: null_terminated_str,
+    BeaconSetting.SETTING_DNS_DOH_ACCEPT: null_terminated_str,
+    BeaconSetting.SETTING_DNS_DOH_HEADERS: null_terminated_str,
     # BeaconSetting.SETTING_PROTOCOL: lambda x: BeaconProtocol(x).name,
     # BeaconSetting.SETTING_CRYPTO_SCHEME: lambda x: CryptoScheme(x).name,
     # BeaconSetting.SETTING_PROXY_BEHAVIOR: lambda x: ProxyServer(x).name,
@@ -755,7 +1104,7 @@ class BeaconConfig:
     def __init__(self, config_block: bytes) -> None:
         self.config_block: bytes = config_block
         """ Raw beacon configuration block bytes """
-        self.settings_tuple = tuple(iter_settings(config_block))
+        self.settings_tuple: tuple[Setting, ...] = tuple(iter_settings(config_block))
         """ Tuple containing the `Setting` objects parsed from `config_block` """
         self.xorkey: Optional[bytes] = None
         """ XOR key that was used to obfuscate the configuration block, ``None`` if unknown. """
@@ -769,6 +1118,12 @@ class BeaconConfig:
         """ PE architecture, ``"x86"`` or ``"x64"`` and  ``None`` if unknown. """
         self.guardrails: Optional[GuardrailMetadata] = None
         """ Guardrails metadata, ``None`` if not available. """
+        self.obfuscate_settings: List[StageObfuscateSettings] = []
+        """ List of transform-obfuscate settings from the stages, empty list if not available. """
+        self.stages: List[str] = []
+        """ List of all obfuscation stages as names, empty list if not available. """
+        self.modifications: Optional[BeaconModifications] = None
+        """ Modifications applied to the beacon config. ``None`` if no modifications were applied. """
 
         # Used for caching
         self._settings: Optional[Mapping[str, Any]] = None
@@ -777,13 +1132,58 @@ class BeaconConfig:
         self._raw_settings_by_index: Optional[Mapping[int, Any]] = None
 
     @classmethod
-    def from_file(cls, fobj: BinaryIO, xor_keys: List[bytes] = None, all_xor_keys: bool = False) -> "BeaconConfig":
+    def _from_block(
+        cls,
+        config_block: BeaconConfigBlock,
+        *,
+        fh,
+        xorencoded: bool,
+        obfuscate_settings: list,
+        stages: list[str],
+        guardrails: GuardrailMetadata | None = None,
+        normalizers: Sequence[Normalizer] | None = None,
+    ) -> BeaconConfig:
+        modifications = None
+
+        if normalizers is None:
+            from dissect.cobaltstrike.normalize import DEFAULT_NORMALIZERS
+
+            normalizers = DEFAULT_NORMALIZERS
+
+        if normalizers:
+            from dissect.cobaltstrike.normalize import normalize_config_block
+
+            config_block, modifications = normalize_config_block(config_block, normalizers=normalizers)
+
+        bconfig = cls(config_block.data)
+        bconfig.xorkey = guardrails.beacon_xor_key if guardrails is not None else config_block.xorkey
+        bconfig.xorencoded = xorencoded
+        bconfig.pe_compile_stamp, bconfig.pe_export_stamp = pe.find_compile_stamps(fh)
+        bconfig.architecture = pe.find_architecture(fh)
+        bconfig.obfuscate_settings = obfuscate_settings
+        bconfig.stages = stages
+        if modifications:
+            bconfig.modifications = modifications
+        bconfig.guardrails = guardrails
+        return bconfig
+
+    @classmethod
+    def from_file(
+        cls,
+        fobj: BinaryIO,
+        *,
+        xor_keys: List[bytes] | None = None,
+        all_xor_keys: bool = True,
+        normalizers: Sequence[Normalizer] | None = None,
+    ) -> "BeaconConfig":
         """Create a :class:`BeaconConfig` from file object, or raises ValueError if no beacon config is found.
 
         Args:
             fobj: file-like object
             xor_keys: override the default `XOR` keys (as bytes) when specified. Default ``None``.
             all_xor_keys: if ``True``, it will try ALL single-byte `XOR` keys if the defaults don't work
+            normalizers: Normalize pipeline. ``None`` uses :data:`DEFAULT_NORMALIZERS`,
+                        ``()`` skips normalization, a sequence replaces the pipeline.
 
         Returns:
             :class:`BeaconConfig`
@@ -791,44 +1191,64 @@ class BeaconConfig:
         Raises:
             ValueError: If no valid beacon configuration was found
         """
-        for config_block, extra_info in iter_beacon_config_blocks(fobj, xor_keys=xor_keys, all_xor_keys=all_xor_keys):
-            bconfig = cls(config_block)
-            # Set extra metadata
-            bconfig.xorkey = extra_info["xorkey"]
-            bconfig.xorencoded = extra_info["xorencoded"]
-            # Try to extract some PE artifacts
-            try:
-                fh = XorEncodedFile.from_file(fobj) if bconfig.xorencoded else fobj
-            except ValueError:
-                fh = fobj
-            bconfig.pe_compile_stamp, bconfig.pe_export_stamp = pe.find_compile_stamps(fh)
-            bconfig.architecture = pe.find_architecture(fh)
-            # Return the first found beacon config.
-            return bconfig
 
-        # Try finding Beacon config protected with Guardrails
-        try:
-            fxor = XorEncodedFile.from_file(fobj)
-        except ValueError:
-            fxor = fobj
-        for grconfig in iter_guardrail_configs_with_beacon(fxor):
+        stages = get_beacon_stages(fobj)
+        fh = fobj if not stages else stages[-1]
+
+        is_xorencoded = any(isinstance(stage, XorEncodedFile) for stage in stages)
+        obfuscate_settings = [stage.settings for stage in stages if isinstance(stage, ObfuscatedBeacon)]
+        stage_names = [stage.get_name() for stage in stages]
+
+        for config_block in iter_beacon_config_blocks(fh, xor_keys=xor_keys, all_xor_keys=all_xor_keys):
+            return cls._from_block(
+                config_block,
+                fh=fh,
+                xorencoded=is_xorencoded,
+                obfuscate_settings=obfuscate_settings,
+                stages=stage_names,
+                normalizers=normalizers,
+            )
+
+        logger.debug("Checking for Guardrails protected Beacon config...")
+        for grconfig in iter_guardrail_configs_with_beacon(fh):
             if not grconfig.unmasked_beacon_config:
                 continue
-            bconfig = cls(grconfig.unmasked_beacon_config)
-            bconfig.guardrails = grconfig
-            bconfig.xorkey = grconfig.beacon_xor_key
-            bconfig.pe_compile_stamp, bconfig.pe_export_stamp = pe.find_compile_stamps(fxor)
-            bconfig.architecture = pe.find_architecture(fxor)
-            return bconfig
+            block = BeaconConfigBlock(
+                data=grconfig.unmasked_beacon_config,
+                xorkey=grconfig.beacon_xor_key,
+            )
+            return cls._from_block(
+                block,
+                fh=fh,
+                xorencoded=is_xorencoded,
+                obfuscate_settings=obfuscate_settings,
+                stages=stage_names,
+                guardrails=grconfig,
+                normalizers=normalizers,
+            )
+
+        candidates = list(iter_repeating_xor_key_candidates(fh))
+        logger.debug(f"multi-byte xor key candidates: {candidates}")
+        for config_block in iter_beacon_config_blocks(fh, xor_keys=candidates, all_xor_keys=False):
+            return cls._from_block(
+                config_block,
+                fh=fh,
+                xorencoded=is_xorencoded,
+                obfuscate_settings=obfuscate_settings,
+                stages=stage_names,
+                normalizers=normalizers,
+            )
 
         raise ValueError("No valid Beacon configuration found")
 
     @classmethod
     def from_path(
         cls,
-        path: Union[str, PathLike],
-        xor_keys: List[bytes] = None,
-        all_xor_keys: bool = False,
+        path: Union[str, Path],
+        *,
+        xor_keys: List[bytes] | None = None,
+        all_xor_keys: bool = True,
+        normalizers: Sequence[Normalizer] | None = None,
     ) -> "BeaconConfig":
         """Create a :class:`BeaconConfig` from path, or raises ValueError if no beacon config is found.
 
@@ -836,6 +1256,8 @@ class BeaconConfig:
             path: path to file on disk
             xor_keys: override the default `XOR` keys (as bytes) when specified. Default ``None``.
             all_xor_keys: if ``True`` it will try ALL single-byte `XOR` keys if the defaults don't work
+            normalizers: Normalize pipeline. ``None`` uses :data:`DEFAULT_NORMALIZERS`,
+                        ``()`` skips normalization, a sequence replaces the pipeline.
 
         Returns:
             :class:`BeaconConfig`
@@ -844,14 +1266,16 @@ class BeaconConfig:
             ValueError: If no valid beacon configuration was found
         """
         with open(path, "rb") as fobj:
-            return cls.from_file(fobj, xor_keys=xor_keys, all_xor_keys=all_xor_keys)
+            return cls.from_file(fobj, xor_keys=xor_keys, all_xor_keys=all_xor_keys, normalizers=normalizers)
 
     @classmethod
     def from_bytes(
         cls,
         data: bytes,
-        xor_keys: List[bytes] = None,
+        *,
+        xor_keys: List[bytes] | None = None,
         all_xor_keys: bool = False,
+        normalizers: Sequence[Normalizer] | None = None,
     ) -> "BeaconConfig":
         """Create a :class:`BeaconConfig` from bytes, or raises ValueError if no beacon config is found.
 
@@ -859,6 +1283,8 @@ class BeaconConfig:
             data: configuration bytes
             xor_keys: override the default `XOR` keys when specified. Default ``None``.
             all_xor_keys: if ``True`` it will try ALL single-byte `XOR` keys if the defaults don't work
+            normalizers: Normalize pipeline. ``None`` uses :data:`DEFAULT_NORMALIZERS`,
+                        ``()`` skips normalization, a sequence replaces the pipeline.
 
         Returns:
             :class:`BeaconConfig`
@@ -866,7 +1292,7 @@ class BeaconConfig:
         Raises:
             ValueError: If no valid beacon configuration was found
         """
-        return cls.from_file(io.BytesIO(data), xor_keys=xor_keys, all_xor_keys=all_xor_keys)
+        return cls.from_file(io.BytesIO(data), xor_keys=xor_keys, all_xor_keys=all_xor_keys, normalizers=normalizers)
 
     def __repr__(self) -> str:
         return f"<BeaconConfig {self.domains}>"
@@ -883,7 +1309,7 @@ class BeaconConfig:
     @property
     def max_setting_enum(self) -> int:
         """The maximum BeaconSetting `enum` value present in the Beacon configuration."""
-        return max(self.setting_enums)
+        return max(self.setting_enums, default=0)
 
     def settings_map(self, index_type="enum", pretty=False, parse=True) -> MappingProxyType:
         """Return a read-only settings mapping indexed by given `index_type`.
@@ -1093,11 +1519,13 @@ class BeaconConfig:
     def version(self) -> BeaconVersion:
         """Deduced version of Cobalt Strike as :class:`~dissect.cobaltstrike.version.BeaconVersion` object.
 
-        The version is deduced from the Beacon's :attr:`pe_export_stamp` when available,
+        The version is deduced from the Beacon's :attr:`pe_export_stamp` when available and known,
         otherwise from :attr:`max_setting_enum`.
         """
         if self.pe_export_stamp:
-            return BeaconVersion.from_pe_export_stamp(self.pe_export_stamp)
+            version = BeaconVersion.from_pe_export_stamp(self.pe_export_stamp)
+            if version != "Unknown":
+                return version
         return BeaconVersion.from_max_setting_enum(self.max_setting_enum)
 
     @property
@@ -1140,6 +1568,11 @@ def build_parser():
         help="output format",
     )
     parser.add_argument(
+        "--fail-on-error",
+        action="store_true",
+        help="exit with non-zero code on error (default: continue processing other files)",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="count",
@@ -1152,7 +1585,7 @@ def build_parser():
 @catch_sigpipe
 def main():
     """Entrypoint for beacon-dump."""
-    from . import c2profile, utils
+    from dissect.cobaltstrike import c2profile, utils
 
     parser = build_parser()
     args = parser.parse_args()
@@ -1168,8 +1601,24 @@ def main():
     if args.xorkey:
         xor_keys = tuple(utils.pack_be(int(x, 0)) for x in args.xorkey)
 
+    def iter_path(files: list[str]) -> Iterator[str]:
+        """If `files` contains a directory, yield all files in the dir recursively. Otherwise, yield path as is."""
+        for fname in files:
+            if fname == "-":
+                yield fname
+            else:
+                path = Path(fname)
+                if path.is_file():
+                    yield str(path)
+                elif path.is_dir():
+                    for f in path.rglob("*"):
+                        if f.is_file():
+                            yield str(f)
+                else:
+                    logging.warning("File not found: %r", fname)
+
     dumped = False
-    for fname in args.input:
+    for fname in iter_path(args.input):
         logging.info("Processing: %r", fname)
         try:
             if fname in ("-", "/dev/stdin"):
@@ -1179,12 +1628,24 @@ def main():
                 config = BeaconConfig.from_path(fname, xor_keys=xor_keys, all_xor_keys=not args.default_xor_keys_only)
         except ValueError:
             print(f"{fname}: No beacon configuration found.", file=sys.stderr)
+            if args.fail_on_error:
+                return 1
+            continue
+        except Exception as e:
+            print(f"{fname}: Error processing beacon configuration: {e}", file=sys.stderr)
+            if args.verbose >= 1:
+                import traceback
+
+                traceback.print_exc()
+            if args.fail_on_error:
+                return 1
             continue
 
         dumped = True
         if args.type == "raw":
             for setting in config.settings_tuple:
                 print(setting)
+
         elif args.type == "dumpstruct":
             cstruct.hexdump(config.config_block)
             print("-----")
@@ -1192,36 +1653,50 @@ def main():
                 cstruct.dumpstruct(setting)
                 print("-" * 10)
         elif args.type == "normal":
+            if args.verbose >= 1:
+                for setting in config.settings_tuple:
+                    if (stock_types := STOCK_TYPE.get(setting.index)) and setting.type not in stock_types:
+                        logger.warning(f"Stock type mismatch for {setting.index}: {setting.type} not in {stock_types}")
+
             settings = config.settings
             for setting, value in settings.items():
                 print(f"{setting} = {value!r}")
             if args.verbose >= 1:
                 print("-" * 50)
-                print(
-                    "pe_export_stamp = {}, {}, {} - {}".format(
-                        config.pe_export_stamp,
-                        hex(config.pe_export_stamp),
-                        time.ctime(config.pe_export_stamp),
-                        config.version,
+                if config.pe_export_stamp:
+                    print(
+                        "pe_export_stamp = {}, {}, {} - {} - {}".format(
+                            config.pe_export_stamp if config.pe_export_stamp else "N/A",
+                            hex(config.pe_export_stamp) if config.pe_export_stamp else "N/A",
+                            time.ctime(config.pe_export_stamp) if config.pe_export_stamp else "N/A",
+                            config.version,
+                            fname,
+                        )
                     )
-                )
-                print(
-                    "pe_compile_stamp = {}, {}, {}".format(
-                        config.pe_compile_stamp,
-                        hex(config.pe_compile_stamp),
-                        time.ctime(config.pe_compile_stamp),
+                else:
+                    print("pe_export_stamp = None", config.version, fname)
+
+                if config.pe_compile_stamp is not None:
+                    print(
+                        "pe_compile_stamp = {}, {}, {}, {}".format(
+                            config.pe_compile_stamp,
+                            hex(config.pe_compile_stamp),
+                            time.ctime(config.pe_compile_stamp),
+                            config.version,
+                        )
                     )
-                )
                 print(
                     "max_setting_enum = {} - {}".format(
                         config.max_setting_enum,
                         BeaconSetting(config.max_setting_enum),
                     )
                 )
-                print("beacon_version =", config.version)
+                print("settings_enums = {} - {}".format("-".join(map(str, config.setting_enums)), config.version))
+                print(f"{config.domains} - beacon_version = {config.version}")
                 if config.guardrails:
                     print("guardrail payload xor key =", config.guardrails.payload_xor_key)
                     print("guardrail options =", [s.option for s in config.guardrails.settings])
+                print("stages =", config.stages)
         elif args.type == "c2profile":
             profile = c2profile.C2Profile.from_beacon_config(config)
             print(profile.as_text())

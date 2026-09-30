@@ -16,7 +16,8 @@ dependencies = [
     "dissect.cstruct >= 4.7",
     "dissect.executable >= 1.11",
     "dissect.util >= 3.24",
-    "lark",
+    "pycryptodome >= 3.23.0",
+    "lark >= 1.3.1",
 ]
 keywords = ["dissect", "cobaltstrike", "beacon", "parser", "parsing", "lark", "cstruct"]
 classifiers = [
@@ -49,7 +50,6 @@ Source = "https://github.com/fox-it/dissect.cobaltstrike"
 [project.optional-dependencies]
 c2 = [
     "flow.record",
-    "pycryptodome",
     "httpx",
 ]
 pcap = [
@@ -80,7 +80,6 @@ docs = [
 [dependency-groups]
 c2 = [
     "flow.record",
-    "pycryptodome",
     "httpx",
 ]
 pcap = [
@@ -193,3 +192,4 @@ lint.select = [
     #"NPY",    # NumPy-specific
     #"RUF",    # Ruff-specific
 ]
+lint.ignore = ["PYI042"]

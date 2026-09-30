@@ -2,6 +2,10 @@
 This module contains the :class:`BeaconVersion` class and mappings for determining the
 Cobalt Strike version of beacon payloads.
 
+Release dates of Cobalt Strike versions are taken from the official release notes:
+
+ - https://hstechdocs.helpsystems.com/releasenotes/Content/_ProductPages/Cobalt_Strike/Cobalt_Strike.htm
+
 .. note::
     Deducing the Cobalt Strike version using :meth:`BeaconVersion.from_pe_export_stamp`
     is more accurate than :meth:`BeaconVersion.from_max_setting_enum`. However, if the
@@ -34,6 +38,11 @@ MAX_ENUM_TO_VERSION: Dict[int, str] = {
     74: "Cobalt Strike 4.7 (Aug 17, 2022)",
     76: "Cobalt Strike 4.9 (Sep 19, 2023)",
     78: "Cobalt Strike 4.10 (Jul 16, 2024)",
+    80: "Cobalt Strike 4.11 (Mar 17, 2025)",
+    85: "Cobalt Strike 4.11 (Mar 17, 2025)",
+    87: "Cobalt Strike 4.11 (Mar 17, 2025)",
+    89: "Cobalt Strike 4.12 (Nov 24, 2025)",
+    91: "Cobalt Strike 4.13 (Jun 10, 2026)",
 }
 """ Max setting enum to Cobalt Strike version mapping """
 
@@ -93,7 +102,11 @@ PE_EXPORT_STAMP_TO_VERSION: Dict[int, str] = {
     0x674E0D13: "Cobalt Strike 4.10.1 (Dec 10, 2024)",
     0x674E0D17: "Cobalt Strike 4.10.1 (Dec 10, 2024)",
 }
-""" PE export timestamp to Cobalt Strike version mapping """
+""" PE export timestamp to Cobalt Strike version mapping.
+
+.. note::
+    Starting from Cobalt Strike version 4.11, the PE export timestamp is no longer available in the beacon.
+"""
 
 
 class BeaconVersion(str):

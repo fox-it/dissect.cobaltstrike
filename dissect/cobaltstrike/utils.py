@@ -11,7 +11,7 @@ import re
 import reprlib
 import string
 import sys
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 from contextlib import contextmanager
 from functools import partial, wraps
 from typing import BinaryIO, Iterator, NamedTuple
@@ -152,7 +152,7 @@ p64be = partial(pack, size=8, byteorder="big")
 def iter_find_needle(
     fp: BinaryIO,
     needle: bytes,
-    start_offset: int = None,
+    start_offset: int | None = None,
     max_offset: int = 0,
 ) -> Iterator[int]:
     """Return an iterator yielding `offset` for found `needle` bytes in file `fp`.
@@ -187,7 +187,8 @@ def iter_find_needle(
             if p == -1 or max_offset and p > max_offset:
                 break
             offset = pos + p - overlap_len
-            yield offset
+            with retain_file_offset(fp):
+                yield offset
         saved = d[-overlap_len:]
 
 
@@ -288,3 +289,63 @@ def grouper(iterable, n, fillvalue=None):
     # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
     return itertools.zip_longest(*args, fillvalue=fillvalue)
+
+
+def iter_repeating_xor_key_candidates(
+    fh: BinaryIO,
+    lengths: tuple[int, ...] = (4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
+    top: int = 8,
+    min_count: int = 8,
+) -> Iterator[bytes]:
+    """Yield likely repeating XOR keys from ``fh``, most frequent first.
+
+    Example samples with multibyte XOR keys:
+    - 1c719cf6d7da2d30c6f4f3b8168b05db0ccbe660c41bfe96d2a22cc5fbf470e1.bin (long key)
+    - 2d49d4cdc154276146479ffdad3e87bdaa8f8218f21871d40c6587aa62684398.bin (short key)
+    - f83dcddec7c7163c996e0a36a29c902395562c2fd6033fe3aad116be4d7e5658.bin (multibyte xor key but also modified types)
+
+    Used when the beacon config is masked with a multi-byte key instead of the
+    stock single-byte ``0x69`` / ``0x2e``. Candidates are the most common
+    *aligned* n-grams; padding after a repeating XOR tends to be the key.
+
+    Side effects: file handle position is restored.
+
+    Args:
+        fh: file-like object
+        lengths: key lengths to consider
+        top: maximum candidates to yield per length
+        min_count: ignore n-grams that occur fewer times than this
+
+    Yields:
+        Candidate XOR keys (bytes)
+    """
+    pos = fh.tell()
+    try:
+        seen: set[bytes] = set()
+        for keylen in sorted(lengths, reverse=False):
+            if keylen < 2:
+                continue
+            fh.seek(0)
+            counter: Counter[bytes] = Counter()
+            # Keep a small tail so grams are not split on buffer boundaries.
+            tail = b""
+            for chunk in iter(partial(fh.read, io.DEFAULT_BUFFER_SIZE), b""):
+                data = tail + chunk
+                n = len(data) - (len(data) % keylen)
+                counter.update(data[i : i + keylen] for i in range(0, n, keylen))
+                tail = data[n:]
+
+            yielded = 0
+            for key, count in counter.most_common():
+                if yielded >= top:
+                    break
+                if count < min_count or key in seen:
+                    continue
+                # All-the-same-byte keys are already covered by all_xor_keys.
+                if len(set(key)) == 1:
+                    continue
+                seen.add(key)
+                yielded += 1
+                yield key
+    finally:
+        fh.seek(pos)

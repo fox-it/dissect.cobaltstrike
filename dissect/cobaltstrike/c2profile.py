@@ -10,6 +10,8 @@ import logging
 import sys
 from typing import TYPE_CHECKING
 
+from dissect.cobaltstrike.obfuscate import ObfuscationType
+
 if TYPE_CHECKING:
     from os import PathLike
 
@@ -269,6 +271,15 @@ class StageBlock(ConfigBlock):
     """`.stage` block"""
 
     __name__ = "stage"
+
+
+class TransformObfuscateBlock(ConfigBlock):
+    """`.stage.transform-obfuscate` block"""
+
+    __name__ = "TransformObfuscateBlock"
+
+    lznt1 = ConfigBlock._pair
+    base64 = ConfigBlock._pair
 
 
 class StageTransformBlock(ConfigBlock):
@@ -691,6 +702,20 @@ class C2Profile(ConfigBlock):
         profile.set_non_empty_config_block("process_inject", proc_inj)
         profile.set_non_empty_config_block("dns_beacon", dns_beacon)
         profile.set_non_empty_config_block("http_beacon", http_beacon)
+
+        if config.obfuscate_settings:
+            transform_obfuscate = TransformObfuscateBlock()
+            stage.set_config_block("transform_obfuscate", transform_obfuscate)
+            for settings in config.obfuscate_settings:
+                if settings.obfuscation_type == ObfuscationType.OBFUSCATION_LZNT1:
+                    transform_obfuscate._enable("lznt1", True)
+                elif settings.obfuscation_type == ObfuscationType.OBFUSCATION_BASE64:
+                    transform_obfuscate._enable("base64", True)
+                elif settings.obfuscation_type == ObfuscationType.OBFUSCATION_XOR:
+                    transform_obfuscate.set_option("xor", str(settings.key_size))
+                elif settings.obfuscation_type == ObfuscationType.OBFUSCATION_RC4:
+                    transform_obfuscate.set_option("rc4", str(settings.key_size))
+
         return profile
 
     def __str__(self) -> str:

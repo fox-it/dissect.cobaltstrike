@@ -7,7 +7,7 @@ from dissect.cobaltstrike import pe, utils, xordecode
 
 
 def test_xordecode(beacon_x86_file):
-    with pytest.raises(ValueError, match="MZ header not found for: .*"):
+    with pytest.raises(ValueError, match="Could not find a valid nonce offset"):
         xf = xordecode.XorEncodedFile.from_file(beacon_x86_file, maxrange=10)
 
     xf = xordecode.XorEncodedFile.from_file(beacon_x86_file)
@@ -45,17 +45,23 @@ def test_xordecode(beacon_x86_file):
 
 
 def test_from_file(tmp_path):
-    with pytest.raises(ValueError, match="MZ header not found for: .*"):
+    with pytest.raises(ValueError, match="Could not find a valid nonce offset"):
         xordecode.XorEncodedFile.from_file(io.BytesIO(b"testing"))
 
-    xf = xordecode.XorEncodedFile(io.BytesIO(b"\x00\x00\x00\x00SSSStest"))
+    xf = xordecode.XorEncodedFile.from_file(io.BytesIO(b"\x00\x00\x00\x00SSSStest"), nonce_offset=0)
     assert xf.read() == b"test"
 
-    xf = xordecode.XorEncodedFile(io.BytesIO(b"\x01\x02\x03\x04SSSStestABCD"))
+    xf = xordecode.XorEncodedFile.from_file(io.BytesIO(b"\x01\x02\x03\x04SSSStestABCD"), nonce_offset=0)
     assert xf.read() == utils.xor(b"test", b"\x01\x02\x03\x04") + utils.xor(b"test", b"ABCD")
 
     p = tmp_path / "small"
+    p.write_bytes(b"food")
+    with p.open("rb") as f:
+        xf = xordecode.XorEncodedFile.from_file(f, nonce_offset=0)
+        assert xf.read() == b""
+
+    p = tmp_path / "smaller"
     p.write_bytes(b"foo")
     with p.open("rb") as f:
-        xf = xordecode.XorEncodedFile(f)
-        assert xf.read() == b""
+        with pytest.raises(AssertionError, match="Nonce must be 4 bytes long"):
+            xordecode.XorEncodedFile.from_file(f, nonce_offset=0)
