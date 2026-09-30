@@ -175,9 +175,9 @@ configuration blocks and instantiate :class:`~dissect.cobaltstrike.beacon.Beacon
         from dissect.cobaltstrike import beacon
 
         with open(sys.argv[1], "rb") as f:
-            for config_block, extra_data in beacon.iter_beacon_config_blocks(f):
+            for config_block in beacon.iter_beacon_config_blocks(f):
                 try:
-                    bconfig = beacon.BeaconConfig(config_block)
+                    bconfig = beacon.BeaconConfig(config_block.data)
                     if not len(bconfig.domains):
                         continue
                 except ValueError:
@@ -202,7 +202,7 @@ If the payload is `XorEncoded` you need to load it using :class:`~dissect.cobalt
 
         In [0]: import time
 
-        In [1]: xf = xordecode.XorEncodedFile.from_path("beacon_93.bin")
+        In [1]: xf = xordecode.XorEncodedFile.from_file(open("beacon_93.bin", "rb"))
 
         In [2]: pe.find_architecture(xf)
 
