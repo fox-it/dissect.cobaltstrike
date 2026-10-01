@@ -56,7 +56,10 @@ struct GuardrailSetting {
 };
 """
 
-BEACON_CONFIG_PATCH_SIZE = 6144
+BEACON_CONFIG_PATCH_SIZES = (
+    0x1800,  # V2, since CS 4.9
+    0x1000,  # V1
+)
 GUARD_PATCH_SIZE = 2048
 
 GUARD_CONFIG_STARTS = [
@@ -112,38 +115,39 @@ def iter_guardrail_configs(fh: BinaryIO, xorkey: bytes = b"\x8a") -> Iterator[Gu
         if xor(a[::-1], b) in xorred_guardconfig_starts:
             log.info("Found guardrail config at offset: %u in %r", offset, fh)
             guard_config_offset = offset + 6
-            beacon_config_offset = guard_config_offset - BEACON_CONFIG_PATCH_SIZE
-            fh.seek(beacon_config_offset)
-            masked_beacon_config = fh.read(BEACON_CONFIG_PATCH_SIZE)
-            masked_guard_config = fh.read(GUARD_PATCH_SIZE)
-            unmasked_guard_config = xor(xor(masked_guard_config, masked_beacon_config[::-1]), xorkey)
+            for patch_size in BEACON_CONFIG_PATCH_SIZES:
+                beacon_config_offset = guard_config_offset - patch_size
+                fh.seek(beacon_config_offset)
+                masked_beacon_config = fh.read(patch_size)
+                masked_guard_config = fh.read(GUARD_PATCH_SIZE)
+                unmasked_guard_config = xor(xor(masked_guard_config, masked_beacon_config[::-1]), xorkey)
 
-            fh_guard = io.BufferedReader(io.BytesIO(unmasked_guard_config))
-            checksum = 0
-            settings: list[GuardrailSetting] = []
-            while True:
-                if fh_guard.peek(2)[:2] == b"\x00\x00":
-                    break
-                setting = GuardrailSetting(fh_guard)
-                settings.append(setting)
-                log.debug(setting)
-                if setting.option == GuardOption.GUARD_PAYLOAD_CHECKSUM:
-                    checksum = u32be(setting.value)
-                    log.debug("%s = 0x%08x", setting.option.name, checksum)
+                fh_guard = io.BufferedReader(io.BytesIO(unmasked_guard_config))
+                checksum = 0
+                settings: list[GuardrailSetting] = []
+                while True:
+                    if fh_guard.peek(2)[:2] == b"\x00\x00":
+                        break
+                    setting = GuardrailSetting(fh_guard)
+                    settings.append(setting)
+                    log.debug(setting)
+                    if setting.option == GuardOption.GUARD_PAYLOAD_CHECKSUM:
+                        checksum = u32be(setting.value)
+                        log.debug("%s = 0x%08x", setting.option.name, checksum)
 
-            yield GuardrailMetadata(
-                beacon_config_offset=beacon_config_offset,
-                guard_config_offset=guard_config_offset,
-                checksum=checksum,
-                masked_guard_config=masked_guard_config,
-                masked_beacon_config=masked_beacon_config,
-                unmasked_guard_config=unmasked_guard_config,
-                guardrail_xor_key=xorkey,
-                beacon_xor_key=b"\x2e",  # we currently only support the XOR default key
-                payload_xor_key=None,
-                unmasked_beacon_config=None,
-                settings=settings,
-            )
+                yield GuardrailMetadata(
+                    beacon_config_offset=beacon_config_offset,
+                    guard_config_offset=guard_config_offset,
+                    checksum=checksum,
+                    masked_guard_config=masked_guard_config,
+                    masked_beacon_config=masked_beacon_config,
+                    unmasked_guard_config=unmasked_guard_config,
+                    guardrail_xor_key=xorkey,
+                    beacon_xor_key=b"\x2e",  # we currently only support the XOR default key
+                    payload_xor_key=None,
+                    unmasked_beacon_config=None,
+                    settings=settings,
+                )
         offset += 1
 
 
@@ -192,5 +196,9 @@ def iter_guardrail_configs_with_beacon(fh: BinaryIO) -> Iterator[GuardrailMetada
                 break
         else:
             # No valid xor key found, so not able to unmask the beacon config
-            # but we can still return the guardrail config
-            yield grconfig
+            log.debug(
+                "Unable to find valid xorkey for guardrail at offset %u (patch_size 0x%x, checksum 0x%08x)",
+                grconfig.guard_config_offset,
+                len(grconfig.masked_beacon_config),
+                grconfig.checksum,
+            )

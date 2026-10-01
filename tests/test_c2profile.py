@@ -1,3 +1,6 @@
+from functools import partial
+from unittest.mock import patch
+
 import pytest
 
 from dissect.cobaltstrike import beacon, c2profile
@@ -346,7 +349,12 @@ def test_c2profile_bof_allocator(allocator_enum, bof_allocator):
         length=0x2,
         value=allocator_enum.dumps(),
     ).dumps()
-    bconfig = beacon.BeaconConfig(data)
+    # Ensure we pass a max_enum value that is high enough for BOF_ALLOCATOR setting
+    with patch(
+        "dissect.cobaltstrike.beacon.iter_settings",
+        partial(beacon.iter_settings, max_enum=74),
+    ):
+        bconfig = beacon.BeaconConfig(data)
     profile = c2profile.C2Profile.from_beacon_config(bconfig)
     assert profile.properties["process-inject.bof_allocator"] == [bof_allocator]
 

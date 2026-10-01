@@ -10,26 +10,35 @@ import contextlib
 import io
 import logging
 import sys
-from typing import BinaryIO, Iterator, NamedTuple, Optional
+from typing import BinaryIO, Iterator, Optional
 
 from dissect.cobaltstrike import utils
 
 logger = logging.getLogger(__name__)
 
 
-class ArtifactKitPayload(NamedTuple):
-    """Namedtuple containing the ArtifactKit metadata and decoded payload"""
+class ArtifactKitPayload(io.BytesIO):
+    """Decoded ArtifactKit payload with its metadata."""
 
-    offset: int
-    """Offset of the ArtifactKit metadata in the file"""
-    size: int
-    """Size of the payload"""
-    xorkey: bytes
-    """4-byte random xor mask"""
-    hints: bytes
-    """Loader hints (GetModuleHandleA, GetProcAddress)"""
-    payload: bytes
-    """Decoded ArtifactKit payload"""
+    def __init__(self, offset: int, size: int, xorkey: bytes, hints: bytes, payload: bytes):
+        super().__init__(payload)
+        self.offset = offset
+        """Offset of the ArtifactKit metadata in the file"""
+        self.size = size
+        """Size of the payload"""
+        self.xorkey = xorkey
+        """4-byte random xor mask"""
+        self.hints = hints
+        """Loader hints (GetModuleHandleA, GetProcAddress)"""
+        self.payload = payload
+        """Decoded ArtifactKit payload"""
+        self.fh = io.BytesIO(payload)
+
+    def __repr__(self) -> str:
+        return f"<ArtifactKitPayload offset=0x{self.offset:x} size={self.size} xorkey={self.xorkey!r}>"
+
+    def get_name(self) -> str:
+        return "ArtifactKitPayload"
 
 
 def iter_artifactkit_payloads(
@@ -68,7 +77,8 @@ def iter_artifactkit_payloads(
             hints = fobj.read(8)
             data = fobj.read(size)
             payload = utils.xor(data, xorkey)
-            yield ArtifactKitPayload(offset=pos, size=size, xorkey=xorkey, hints=hints, payload=payload)
+            if size > 0:
+                yield ArtifactKitPayload(offset=pos, size=size, xorkey=xorkey, hints=hints, payload=payload)
         pos += 1
 
 

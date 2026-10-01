@@ -61,9 +61,9 @@ def test_beacon_custom_xorkey(beacon_custom_xorkey_file):
     # Read the beacon into memory to speed things up
     fh = io.BytesIO(beacon_custom_xorkey_file.read())
 
-    # Try default xor keys.
+    # Try default single byte xor keys. (but disable all_xor_keys)
     with pytest.raises(ValueError, match="No valid Beacon configuration found"):
-        beacon.BeaconConfig.from_file(fh)
+        beacon.BeaconConfig.from_file(fh, all_xor_keys=False)
 
     # Try all xorkeys (but with invalid one)
     with patch("dissect.cobaltstrike.beacon.make_byte_list", return_value=[b"\xaa"]):
@@ -363,3 +363,34 @@ def test_beacon_dump_default_xor_keys_only(beacon_custom_xorkey_path):
     assert b"No beacon configuration found" in proc.stderr
     with pytest.raises(subprocess.CalledProcessError):
         proc.check_returncode()
+
+
+def test_beacon_transform_obfuscate(transform_obfuscate_beacon_file):
+    # Cobalt Strike 4.11+ stage.transform-obfuscate beacon: the payload is wrapped in
+    # multiple obfuscation stages (BASE64/XOR/RC4/LZNT1) that are transparently deobfuscated.
+    bconfig = beacon.BeaconConfig.from_file(transform_obfuscate_beacon_file)
+
+    assert bconfig.version == "Cobalt Strike 4.12 (Nov 24, 2025)"
+    assert bconfig.domains == ["corp.citrix-cloud.com"]
+
+    # No PE export timestamp from 4.11 onwards, so the version is deduced from the max setting enum.
+    assert bconfig.pe_export_stamp is None
+    assert bconfig.max_setting_enum == 89
+
+    # The deobfuscation stage chain should be recovered.
+    assert bconfig.stages == [
+        "ObfuscatedBeacon(OBFUSCATION_BASE64)",
+        "ObfuscatedBeacon(OBFUSCATION_XOR)",
+        "ObfuscatedBeacon(OBFUSCATION_RC4)",
+        "ObfuscatedBeacon(OBFUSCATION_LZNT1)",
+        "ObfuscatedBeacon(OBFUSCATION_NONE)",
+    ]
+
+    obfuscation_types = [str(s.obfuscation_type).split(".")[-1] for s in bconfig.obfuscate_settings]
+    assert obfuscation_types == [
+        "OBFUSCATION_BASE64",
+        "OBFUSCATION_XOR",
+        "OBFUSCATION_RC4",
+        "OBFUSCATION_LZNT1",
+        "OBFUSCATION_NONE",
+    ]

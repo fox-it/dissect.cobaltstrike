@@ -140,6 +140,7 @@ stage_options: "string" string ";"                  -> string
     | "set" "syscall_method" string ";"             -> syscall_method           // introduced in Cobalt Strike 4.8
     | "set" "data_store_size" string ";"            -> data_store_size          // introduced in Cobalt Strike 4.9
     | "beacon_gate" "{" beacon_gate_options* "}"    -> beacon_gate              // introduced in Cobalt Strike 4.10
+    | "transform-obfuscate" "{" obfuscate_options* "}" -> transform_obfuscate   // introduced in Cobalt Strike 4.11
 
 process_inject_options: "set" "allocator" string ";"    -> allocator
     | "set" "min_alloc" string ";"                      -> min_alloc
@@ -218,6 +219,11 @@ dns_beacon_options: "set" "dns_idle" string ";" -> dns_idle
 http_beacon_options: "set" "library" string ";" -> library              // introduced in Cobalt Strike 4.9
     | "set" "data_required" string ";"          -> data_required        // introduced in Cobalt Strike 4.10
     | "set" "data_required_length" string ";"   -> data_required_length // introduced in Cobalt Strike 4.10
+
+obfuscate_options: "lznt1" ";"  -> lznt1
+    | "rc4" string ";"          -> rc4
+    | "xor" string ";"          -> xor
+    | "base64" ";"              -> base64
 
 header: string
 string: STRING

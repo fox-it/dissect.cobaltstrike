@@ -26,6 +26,11 @@ Some examples showing how to use the ``dissect.cobaltstrike`` Python API.
             with zf.open(p.stem, pwd=b"dissect.cobaltstrike") as f:
                 open("beacon_xor.bin", "wb").write(f.read())
 
+        p = pathlib.Path("../tests/beacons/d972234f6b1e2f3635b24c9754e2b252.bin.zip")
+        with zipfile.ZipFile(p) as zf:
+            with zf.open(p.stem, pwd=b"dissect.cobaltstrike") as f:
+                open("beacon_obfuscated.bin", "wb").write(f.read())
+
         shutil.copy2("../tests/profiles/amazon.profile", ".")
 
 Beacon Configuration
@@ -120,6 +125,40 @@ the :meth:`BeaconConfig.from_bytes() <dissect.cobaltstrike.beacon.BeaconConfig.f
 
         In [7]: config.version
 
+Transform-Obfuscate (obfuscated beacons)
+----------------------------------------
+
+Starting from Cobalt Strike 4.11 the ``stage.transform-obfuscate`` feature can wrap a Beacon payload in
+multiple layers of obfuscation (any combination of ``base64``, ``xor``, ``rc4`` and ``lznt1``).
+The ``from_`` constructors transparently detect and unwrap these obfuscation layers, so no extra steps are
+required to load an obfuscated Beacon:
+
+.. ipython::
+
+        In [1]: from dissect.cobaltstrike.beacon import BeaconConfig
+
+        In [2]: bconfig = BeaconConfig.from_path("beacon_obfuscated.bin")
+
+        In [3]: bconfig.version
+
+        In [4]: bconfig.domains
+
+The recovered obfuscation layers are available on the
+:attr:`~dissect.cobaltstrike.beacon.BeaconConfig.stages` attribute, and the parsed obfuscation settings
+(type, key size, sizes) on :attr:`~dissect.cobaltstrike.beacon.BeaconConfig.obfuscate_settings`:
+
+.. ipython::
+
+        In [5]: bconfig.stages
+
+        In [6]: bconfig.obfuscate_settings
+
+.. note::
+
+   From Cobalt Strike 4.11 onwards the PE export timestamp is no longer present in the beacon, so the
+   version is deduced from :attr:`~dissect.cobaltstrike.beacon.BeaconConfig.max_setting_enum` instead.
+   See :doc:`beacon-version-identification` for more details.
+
 Memory dumps
 ------------
 While you can use :class:`~dissect.cobaltstrike.beacon.BeaconConfig` to load Beacon payloads directly,
@@ -136,9 +175,9 @@ configuration blocks and instantiate :class:`~dissect.cobaltstrike.beacon.Beacon
         from dissect.cobaltstrike import beacon
 
         with open(sys.argv[1], "rb") as f:
-            for config_block, extra_data in beacon.iter_beacon_config_blocks(f):
+            for config_block in beacon.iter_beacon_config_blocks(f):
                 try:
-                    bconfig = beacon.BeaconConfig(config_block)
+                    bconfig = beacon.BeaconConfig(config_block.data)
                     if not len(bconfig.domains):
                         continue
                 except ValueError:
@@ -163,7 +202,7 @@ If the payload is `XorEncoded` you need to load it using :class:`~dissect.cobalt
 
         In [0]: import time
 
-        In [1]: xf = xordecode.XorEncodedFile.from_path("beacon_93.bin")
+        In [1]: xf = xordecode.XorEncodedFile.from_file(open("beacon_93.bin", "rb"))
 
         In [2]: pe.find_architecture(xf)
 
