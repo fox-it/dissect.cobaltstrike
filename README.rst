@@ -1,8 +1,8 @@
 Dissecting Cobalt Strike using Python
 =====================================
 
-.. image:: https://github.com/fox-it/dissect.cobaltstrike/workflows/Tests/badge.svg
-   :target: https://github.com/fox-it/dissect.cobaltstrike/actions
+.. image:: https://github.com/fox-it/dissect.cobaltstrike/actions/workflows/dissect-ci.yml/badge.svg
+   :target: https://github.com/fox-it/dissect.cobaltstrike/actions/workflows/dissect-ci.yml
    :alt: GitHub Actions status
 .. image:: https://readthedocs.org/projects/dissect-cobaltstrike/badge/?version=latest
    :target: https://dissect-cobaltstrike.readthedocs.io/en/latest/?badge=latest
