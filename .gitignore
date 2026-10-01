@@ -73,6 +73,9 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+# Test data extracted by the ipython examples during docs build
+docs/*.bin
+docs/*.profile
 
 # PyBuilder
 .pybuilder/
@@ -111,6 +114,9 @@ ipython_config.py
 #   in version control.
 #   https://pdm.fming.dev/#use-with-ide
 .pdm.toml
+
+# uv
+uv.lock
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
